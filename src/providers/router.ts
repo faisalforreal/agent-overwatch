@@ -161,6 +161,9 @@ export class ProviderRouter {
           maxTokens: options.maxTokens || this.config.maxOutputTokens,
           timeoutMs: options.timeoutMs || this.config.requestTimeoutMs,
           enableThinking: options.enableThinking ?? this.config.enableThinking,
+          thinkingBudgetTokens:
+            options.thinkingBudgetTokens ?? this.config.thinkingBudgetTokens,
+          fastMode: options.fastMode ?? this.config.fastMode,
           enablePromptCaching:
             options.enablePromptCaching ?? this.config.enablePromptCaching,
         });

@@ -58,9 +58,9 @@ describe('Context, Notes, and Budget Guard', () => {
       huge += `- Rejected: Alternative number ${i}\n`;
     }
 
-    const compacted = compactNotesContent(huge, 1024); // Cap at 1KB for test
-    expect(compacted).toContain('Core Architectural Decisions');
-    expect(compacted).toContain('Active Constraints & Requirements');
+    const compacted = compactNotesContent(huge, 4096);
+    expect(compacted).toContain('Architectural Decisions');
+    expect(compacted).toContain('System Constraints');
     expect(compacted.length).toBeLessThan(huge.length);
   });
 

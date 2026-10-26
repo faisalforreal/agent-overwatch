@@ -265,11 +265,13 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
     try {
       if (name === 'overwatch_plan_check') {
         const input = OverwatchPlanCheckInputSchema.parse(args);
+        const timeoutMs = config.toolTimeouts.overwatch_plan_check || 180000;
         const { feedback, markdown } = await executePlanCheck(
           input,
           router,
           config.maxCallsPerSession,
-          onProgress
+          onProgress,
+          timeoutMs
         );
         return {
           content: [
@@ -281,11 +283,13 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
 
       if (name === 'overwatch_checkpoint') {
         const input = OverwatchCheckpointInputSchema.parse(args);
+        const timeoutMs = config.toolTimeouts.overwatch_checkpoint || 90000;
         const { feedback, markdown } = await executeCheckpoint(
           input,
           router,
           config.maxCallsPerSession,
-          onProgress
+          onProgress,
+          timeoutMs
         );
         return {
           content: [
@@ -297,12 +301,14 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
 
       if (name === 'overwatch_review') {
         const input = OverwatchReviewInputSchema.parse(args);
+        const timeoutMs = config.toolTimeouts.overwatch_review || 120000;
         const { feedback, markdown } = await executeReview(
           input,
           router,
           config.juniorModel,
           config.maxCallsPerSession,
-          onProgress
+          onProgress,
+          timeoutMs
         );
         return {
           content: [
@@ -314,12 +320,14 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
 
       if (name === 'overwatch_quick_hint') {
         const input = OverwatchQuickHintInputSchema.parse(args);
+        const timeoutMs = config.toolTimeouts.overwatch_quick_hint || 45000;
         const { feedback, markdown } = await executeQuickHint(
           input,
           router,
           undefined,
           config.maxCallsPerSession,
-          onProgress
+          onProgress,
+          timeoutMs
         );
         return {
           content: [
@@ -331,11 +339,13 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
 
       if (name === 'overwatch_verify') {
         const input = OverwatchVerifyInputSchema.parse(args);
+        const timeoutMs = config.toolTimeouts.overwatch_verify || 180000;
         const { feedback, markdown } = await executeVerify(
           input,
           router,
           config.maxCallsPerSession,
-          onProgress
+          onProgress,
+          timeoutMs
         );
         return {
           content: [

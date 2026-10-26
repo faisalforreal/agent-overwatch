@@ -86,13 +86,15 @@ export function getClientPaths(
       }
       return {
         mcpConfigPath: clinePath,
+        rulesPath: path.join(ws, '.clinerules'),
       };
     }
 
     case 'codex':
-      // Source: OpenAI Codex documentation for ~/.codex/config.toml
+      // Source: OpenAI Codex documentation for ~/.codex/config.toml and AGENTS.md
       return {
         mcpConfigPath: path.join(home, '.codex', 'config.toml'),
+        rulesPath: path.join(ws, 'AGENTS.md'),
       };
 
     default:
@@ -132,6 +134,10 @@ Activation Mode: Always On
 
 ${baseRules}
 `;
+  }
+
+  if (client === 'vscode') {
+    return `${baseRules}\n`;
   }
 
   return `\n<!-- BEGIN ${APP_NAME.toUpperCase()} RULES -->
@@ -215,19 +221,11 @@ export function installForClient(
       pathsModified.push(paths.mcpConfigPath);
       if (res.backup) backupsCreated.push(res.backup);
     }
-    return {
-      client,
-      status: options.dryRun ? 'dry_run' : options.uninstall ? 'uninstalled' : 'installed',
-      pathsModified,
-      backupsCreated,
-      message: options.dryRun
-        ? `[DRY-RUN] Would ${options.uninstall ? 'uninstall from' : 'configure in'} ~/.codex/config.toml`
-        : `Successfully ${options.uninstall ? 'uninstalled from' : 'configured'} ~/.codex/config.toml`,
-    };
+    // Continue below to install rulesPath (AGENTS.md)
   }
 
   // 1. Manage JSON MCP Config (Antigravity, Claude Code, Cursor, Windsurf, VS Code)
-  if (paths.mcpConfigPath) {
+  if (client !== 'codex' && paths.mcpConfigPath) {
     const configDir = path.dirname(paths.mcpConfigPath);
     let existingJson: Record<string, any> = {};
 
@@ -303,7 +301,8 @@ export function installForClient(
   // 3. Manage Rules (Cursor .mdc, Windsurf .md, Claude Code CLAUDE.md, Antigravity AGENTS.md)
   if (paths.rulesPath) {
     const rulesDir = path.dirname(paths.rulesPath);
-    const isStandaloneRuleFile = client === 'cursor' || client === 'windsurf';
+    const isStandaloneRuleFile =
+      client === 'cursor' || client === 'windsurf' || client === 'vscode';
 
     if (isStandaloneRuleFile) {
       if (options.uninstall) {

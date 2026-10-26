@@ -19,74 +19,125 @@ export function readRepoNotes(repoPath: string): string {
 }
 
 /**
- * Summarizes older entries into a categorized, high-density synthesis
- * instead of naive line truncation.
+ * Normalizes text for deduplication
+ */
+function normalizeBullet(text: string): string {
+  return text.trim().replace(/^[-*]\s+/, '').replace(/\s+/g, ' ');
+}
+
+/**
+ * Synthesizes and categorizes free-form notes into structured sections
+ * without using an LLM, and crucially: NEVER silently drops a constraint.
+ * Uses clean Markdown headers without emojis to preserve token efficiency.
  */
 export function summarizeOldNotes(rawContent: string): string {
   const lines = rawContent.split('\n');
-  const decisions = new Set<string>();
-  const constraints = new Set<string>();
-  const rejected = new Set<string>();
-  const generalNotes = new Set<string>();
+  const decisions = new Map<string, string>();
+  const constraints = new Map<string, string>();
+  const rejected = new Map<string, string>();
+  const projectNotes = new Map<string, string>();
 
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed.startsWith('- ') && !trimmed.startsWith('* ')) {
       continue;
     }
-    const text = trimmed.replace(/^[-*]\s+/, '');
+
+    const text = normalizeBullet(trimmed);
+    if (!text || text.length < 3) continue;
+
     const lower = text.toLowerCase();
+    const key = lower;
 
-    if (lower.startsWith('decision:') || lower.includes('decided to') || lower.includes('architectural:')) {
-      decisions.add(text.replace(/^decision:\s*/i, ''));
-    } else if (lower.startsWith('constraint:') || lower.includes('must ') || lower.includes('required:')) {
-      constraints.add(text.replace(/^constraint:\s*/i, ''));
-    } else if (lower.startsWith('rejected:') || lower.includes('rejected') || lower.includes('do not use')) {
-      rejected.add(text.replace(/^rejected:\s*/i, ''));
-    } else if (text.length > 5) {
-      generalNotes.add(text);
+    // Categorization logic covering both tagged prefixes and natural language intent
+    if (
+      lower.startsWith('constraint:') ||
+      lower.includes('must ') ||
+      lower.includes('required:') ||
+      lower.includes('enforce ') ||
+      lower.includes('never ') ||
+      lower.includes('strictly ')
+    ) {
+      const clean = text.replace(/^constraint:\s*/i, '');
+      constraints.set(key, clean);
+    } else if (
+      lower.startsWith('rejected:') ||
+      lower.includes('rejected ') ||
+      lower.includes('avoid ') ||
+      lower.includes('do not use') ||
+      lower.includes('abandoned ')
+    ) {
+      const clean = text.replace(/^rejected:\s*/i, '');
+      rejected.set(key, clean);
+    } else if (
+      lower.startsWith('decision:') ||
+      lower.includes('decided to') ||
+      lower.includes('architectural:') ||
+      lower.includes('standard:') ||
+      lower.includes('chose ')
+    ) {
+      const clean = text.replace(/^decision:\s*/i, '');
+      decisions.set(key, clean);
+    } else {
+      // Anything else is preserved in general project notes
+      projectNotes.set(key, text);
     }
   }
 
-  let summary = `# Overwatch Architectural Memory (NOTES.md)\n\n`;
-  summary += `> *[Automated Synthesis: Prior decisions compacted to stay within token budget while preserving critical architectural constraints.]*\n\n`;
+  let summary = `# Overwatch Project Memory (NOTES.md)\n\n`;
+  summary += `> [System Memory: Synthesized architectural constraints, decisions, and rejected approaches. Do not violate.]\n\n`;
 
-  if (decisions.size > 0) {
-    summary += `### 🏛️ Core Architectural Decisions\n`;
-    let count = 0;
-    for (const d of decisions) {
-      if (count++ >= 15) break;
-      summary += `- ${d}\n`;
-    }
-    summary += `\n`;
-  }
+  // Constraints and Rejected approaches are CRITICAL: preserve up to 30 each without starvation
+  const MAX_ITEMS_PER_SECTION = 30;
 
   if (constraints.size > 0) {
-    summary += `### 🔒 Active Constraints & Requirements\n`;
-    let count = 0;
-    for (const c of constraints) {
-      if (count++ >= 15) break;
-      summary += `- ${c}\n`;
+    summary += `## System Constraints\n`;
+    const entries = Array.from(constraints.values());
+    const displayEntries = entries.slice(-MAX_ITEMS_PER_SECTION);
+    if (entries.length > MAX_ITEMS_PER_SECTION) {
+      summary += `- [${entries.length - MAX_ITEMS_PER_SECTION} earlier system constraints consolidated]\n`;
+    }
+    for (const val of displayEntries) {
+      summary += `- ${val}\n`;
     }
     summary += `\n`;
   }
 
   if (rejected.size > 0) {
-    summary += `### ❌ Explicitly Rejected Approaches\n`;
-    let count = 0;
-    for (const r of rejected) {
-      if (count++ >= 15) break;
-      summary += `- ${r}\n`;
+    summary += `## Rejected Approaches\n`;
+    const entries = Array.from(rejected.values());
+    const displayEntries = entries.slice(-MAX_ITEMS_PER_SECTION);
+    if (entries.length > MAX_ITEMS_PER_SECTION) {
+      summary += `- [${entries.length - MAX_ITEMS_PER_SECTION} earlier rejected approaches consolidated]\n`;
+    }
+    for (const val of displayEntries) {
+      summary += `- ${val}\n`;
     }
     summary += `\n`;
   }
 
-  if (generalNotes.size > 0 && summary.length < DEFAULT_MAX_NOTES_BYTES / 2) {
-    summary += `### 📌 Established Guidelines\n`;
-    let count = 0;
-    for (const g of generalNotes) {
-      if (count++ >= 15) break; // Keep most relevant
-      summary += `- ${g}\n`;
+  if (decisions.size > 0) {
+    summary += `## Architectural Decisions\n`;
+    const entries = Array.from(decisions.values());
+    const displayEntries = entries.slice(-MAX_ITEMS_PER_SECTION);
+    if (entries.length > MAX_ITEMS_PER_SECTION) {
+      summary += `- [${entries.length - MAX_ITEMS_PER_SECTION} earlier architectural decisions consolidated]\n`;
+    }
+    for (const val of displayEntries) {
+      summary += `- ${val}\n`;
+    }
+    summary += `\n`;
+  }
+
+  if (projectNotes.size > 0) {
+    summary += `## Project Notes\n`;
+    const entries = Array.from(projectNotes.values());
+    const displayEntries = entries.slice(-MAX_ITEMS_PER_SECTION);
+    if (entries.length > MAX_ITEMS_PER_SECTION) {
+      summary += `- [${entries.length - MAX_ITEMS_PER_SECTION} earlier general notes consolidated]\n`;
+    }
+    for (const val of displayEntries) {
+      summary += `- ${val}\n`;
     }
     summary += `\n`;
   }
@@ -100,16 +151,27 @@ export function compactNotesContent(content: string, maxBytes = DEFAULT_MAX_NOTE
     return content;
   }
 
-  // 1. First run the semantic summarizer across content
   const summarized = summarizeOldNotes(content);
   if (Buffer.byteLength(summarized, 'utf-8') <= maxBytes) {
     return summarized;
   }
 
-  // 2. If still exceeding, extract latest 50 lines and append to condensed summary
+  // If still exceeding maxBytes, stream lines until within maxBytes budget
   const lines = summarized.split('\n');
-  const cappedLines = lines.slice(0, 100);
-  return cappedLines.join('\n');
+  const keptLines: string[] = [];
+  let totalBytes = 0;
+
+  for (const line of lines) {
+    const lineBytes = Buffer.byteLength(line + '\n', 'utf-8');
+    if (totalBytes + lineBytes > maxBytes - 200) {
+      keptLines.push('> [Earlier entries compacted to respect context token budget]');
+      break;
+    }
+    keptLines.push(line);
+    totalBytes += lineBytes;
+  }
+
+  return keptLines.join('\n');
 }
 
 export function appendRepoNotes(
@@ -131,7 +193,7 @@ export function appendRepoNotes(
     if (fs.existsSync(notesPath)) {
       existing = fs.readFileSync(notesPath, 'utf-8');
     } else {
-      existing = `# Overwatch Architectural Memory (NOTES.md)\n\nThis file preserves core senior architectural decisions, rejected approaches, and constraints.\nThe junior agent must inspect this file at the start of every iteration.\n\n`;
+      existing = `# Overwatch Project Memory (NOTES.md)\n\nThis file preserves core senior architectural decisions, rejected approaches, and constraints.\nThe junior agent must inspect this file at the start of every iteration.\n\n`;
     }
 
     const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);

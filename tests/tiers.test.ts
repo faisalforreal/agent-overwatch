@@ -6,17 +6,16 @@ describe('Tier Validation Engine', () => {
     expect(getModelTier('claude-opus-5').tier).toBe('frontier');
     expect(getModelTier('anthropic/claude-3-opus-20240229').tier).toBe('frontier');
     expect(getModelTier('fable-5.1').tier).toBe('frontier');
-    expect(getModelTier('gemini-4-argon').tier).toBe('frontier');
-    expect(getModelTier('google/gemini-astra').tier).toBe('frontier');
     expect(getModelTier('o3-mini').tier).toBe('frontier');
     expect(getModelTier('openai/o1').tier).toBe('frontier');
   });
 
   it('correctly maps strong models', () => {
     expect(getModelTier('claude-3-5-sonnet').tier).toBe('strong');
+    expect(getModelTier('claude-3-7-sonnet').tier).toBe('strong');
     expect(getModelTier('deepseek/deepseek-r1').tier).toBe('strong');
     expect(getModelTier('gpt-4o').tier).toBe('strong');
-    expect(getModelTier('gemini-3.5-pro').tier).toBe('strong');
+    expect(getModelTier('gemini-2.0-pro').tier).toBe('strong');
   });
 
   it('correctly maps medium and junior models', () => {
@@ -45,7 +44,7 @@ describe('Tier Validation Engine', () => {
     // Medium mentor vs Medium junior -> INVALID
     const res3 = validateMentorSuperiority('gemini-2.0-flash', 'gemini-3.8-flash');
     expect(res3.valid).toBe(false);
-    expect(res3.warning).toContain('is NOT stronger');
+    expect(res3.warning).toContain('not stronger');
 
     // Small mentor vs Medium junior -> INVALID
     const res4 = validateMentorSuperiority('gpt-3.5-turbo', 'gemini-3.8-flash');

@@ -46,20 +46,20 @@ export function loadModelsData(customPath?: string): ModelsData {
     } catch {}
   }
 
-  // Fallback defaults if models.json is not found
+  // Fallback defaults
   const fallback: ModelsData = {
-    version: '1.1.0-fallback',
+    version: '1.2.0-fallback',
     models: [
-      { pattern: '.*fable.*', tier: 'frontier', rank: 98, reasoning: true, description: 'Fable series' },
-      { pattern: '.*opus.*', tier: 'frontier', rank: 96, reasoning: true, description: 'Opus series' },
-      { pattern: '.*argon.*', tier: 'frontier', rank: 95, reasoning: true, description: 'Gemini Argon series' },
-      { pattern: '.*o3.*', tier: 'frontier', rank: 94, reasoning: true, description: 'o3 series' },
-      { pattern: '.*o1.*', tier: 'frontier', rank: 91, reasoning: true, description: 'o1 series' },
-      { pattern: '.*sonnet.*', tier: 'strong', rank: 78, reasoning: false, description: 'Sonnet series' },
-      { pattern: '.*gpt-4o$', tier: 'strong', rank: 76, reasoning: false, description: 'GPT-4o' },
-      { pattern: '.*flash.*', tier: 'medium', rank: 55, reasoning: false, description: 'Flash series' },
-      { pattern: '.*haiku.*', tier: 'medium', rank: 50, reasoning: false, description: 'Haiku series' },
-      { pattern: '.*mini.*', tier: 'medium', rank: 48, reasoning: false, description: 'Mini series' },
+      { pattern: '.*fable.*', tier: 'frontier', ordinal: 3, reasoning: true, description: 'Fable series' },
+      { pattern: '.*opus.*', tier: 'frontier', ordinal: 2, reasoning: true, description: 'Opus series' },
+      { pattern: '.*o3.*', tier: 'frontier', ordinal: 2, reasoning: true, description: 'o3 series' },
+      { pattern: '.*o1.*', tier: 'frontier', ordinal: 1, reasoning: true, description: 'o1 series' },
+      { pattern: '.*sonnet.*', tier: 'strong', ordinal: 2, reasoning: false, description: 'Sonnet series' },
+      { pattern: '.*deepseek.*', tier: 'strong', ordinal: 2, reasoning: true, description: 'DeepSeek series' },
+      { pattern: '.*gpt-4o$', tier: 'strong', ordinal: 2, reasoning: false, description: 'GPT-4o' },
+      { pattern: '.*flash.*', tier: 'medium', ordinal: 2, reasoning: false, description: 'Flash series' },
+      { pattern: '.*haiku.*', tier: 'medium', ordinal: 2, reasoning: false, description: 'Haiku series' },
+      { pattern: '.*mini.*', tier: 'medium', ordinal: 1, reasoning: false, description: 'Mini series' },
     ],
   };
   return fallback;
@@ -67,7 +67,7 @@ export function loadModelsData(customPath?: string): ModelsData {
 
 export interface ModelMatchResult {
   tier: ModelTier;
-  rank: number;
+  ordinal: number;
   reasoning: boolean;
   matchedPattern?: string;
   isUnknown: boolean;
@@ -75,7 +75,7 @@ export interface ModelMatchResult {
 
 export function getModelTier(modelName: string, customPath?: string): ModelMatchResult {
   if (!modelName || typeof modelName !== 'string') {
-    return { tier: 'medium', rank: 50, reasoning: false, isUnknown: true };
+    return { tier: 'medium', ordinal: 1, reasoning: false, isUnknown: true };
   }
 
   const cleanName = modelName.trim().toLowerCase();
@@ -87,7 +87,7 @@ export function getModelTier(modelName: string, customPath?: string): ModelMatch
       if (reg.test(cleanName)) {
         return {
           tier: entry.tier,
-          rank: entry.rank || 50,
+          ordinal: entry.ordinal || 1,
           reasoning: entry.reasoning,
           matchedPattern: entry.pattern,
           isUnknown: false,
@@ -98,7 +98,7 @@ export function getModelTier(modelName: string, customPath?: string): ModelMatch
 
   return {
     tier: 'medium',
-    rank: 50,
+    ordinal: 1,
     reasoning: false,
     isUnknown: true,
   };
@@ -112,8 +112,8 @@ export interface TierValidationResult {
   valid: boolean;
   mentorTier: ModelTier;
   juniorTier: ModelTier;
-  mentorRank: number;
-  juniorRank: number;
+  mentorOrdinal: number;
+  juniorOrdinal: number;
   mentorIsUnknown: boolean;
   juniorIsUnknown: boolean;
   isIntraTier: boolean;
@@ -123,10 +123,10 @@ export interface TierValidationResult {
 export function validateMentorSuperiority(
   mentorModel: string,
   juniorModel: string,
-  customModelsPath?: string
+  options: { customModelsPath?: string; allowSameTier?: boolean } = {}
 ): TierValidationResult {
-  const mentorMatch = getModelTier(mentorModel, customModelsPath);
-  const juniorMatch = getModelTier(juniorModel, customModelsPath);
+  const mentorMatch = getModelTier(mentorModel, options.customModelsPath);
+  const juniorMatch = getModelTier(juniorModel, options.customModelsPath);
 
   const tierDiff = compareTiers(mentorMatch.tier, juniorMatch.tier);
   let valid = false;
@@ -134,21 +134,23 @@ export function validateMentorSuperiority(
   let warning: string | undefined;
 
   if (tierDiff > 0) {
-    // Strictly higher tier (e.g. frontier vs medium, or strong vs medium)
+    // Strictly higher tier (e.g. frontier > medium, strong > medium)
     valid = true;
   } else if (tierDiff === 0) {
-    // Same tier: evaluate intra-tier ranking (e.g., Fable 5.1 [98] vs Claude Opus [96])
+    // Same tier
     isIntraTier = true;
-    const rankDiff = mentorMatch.rank - juniorMatch.rank;
-    if (rankDiff > 0) {
+    const ordinalDiff = mentorMatch.ordinal - juniorMatch.ordinal;
+
+    if (options.allowSameTier) {
       valid = true;
-      // Valid intra-tier configuration
-    } else if (rankDiff === 0) {
-      valid = false;
-      warning = `Both mentor '${mentorModel}' and junior '${juniorModel}' have identical capability rank (${mentorMatch.rank}) in tier '${mentorMatch.tier}'. A mentor must be strictly stronger than the junior agent.`;
+      warning = `Same-tier pairing allowed by configuration (both '${mentorMatch.tier}').`;
+    } else if (ordinalDiff > 0) {
+      // Mentor has higher ordinal within same tier (e.g. Fable 5.1 [3] vs Opus [2])
+      valid = true;
+      warning = `Intra-tier mentor pairing: both models in '${mentorMatch.tier}' tier, but mentor has higher ordinal priority (${mentorMatch.ordinal} vs ${juniorMatch.ordinal}).`;
     } else {
       valid = false;
-      warning = `Mentor model '${mentorModel}' (rank: ${mentorMatch.rank}) is NOT stronger than junior model '${juniorModel}' (rank: ${juniorMatch.rank}) within tier '${mentorMatch.tier}'. Intra-tier mentors must have a higher rank.`;
+      warning = `Mentor model '${mentorModel}' is not stronger than junior model '${juniorModel}' (both in '${mentorMatch.tier}' tier with close capability). A mentor should belong to a higher capability tier.`;
     }
   } else {
     // Strictly lower tier
@@ -157,7 +159,7 @@ export function validateMentorSuperiority(
   }
 
   if (mentorMatch.isUnknown || juniorMatch.isUnknown) {
-    const unknownNote = `Heuristic tier warning: Model '${mentorMatch.isUnknown ? mentorModel : juniorModel}' was not found in models.json; defaulted to 'medium' (rank 50). Verify capability.`;
+    const unknownNote = `Heuristic tier warning: Model '${mentorMatch.isUnknown ? mentorModel : juniorModel}' was not found in models.json; defaulted to 'medium'.`;
     warning = warning ? `${warning} (${unknownNote})` : unknownNote;
   }
 
@@ -165,8 +167,8 @@ export function validateMentorSuperiority(
     valid,
     mentorTier: mentorMatch.tier,
     juniorTier: juniorMatch.tier,
-    mentorRank: mentorMatch.rank,
-    juniorRank: juniorMatch.rank,
+    mentorOrdinal: mentorMatch.ordinal,
+    juniorOrdinal: juniorMatch.ordinal,
     mentorIsUnknown: mentorMatch.isUnknown,
     juniorIsUnknown: juniorMatch.isUnknown,
     isIntraTier,

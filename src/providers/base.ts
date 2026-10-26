@@ -12,6 +12,8 @@ export interface ProviderRequestOptions {
   maxTokens?: number;
   timeoutMs?: number;
   enableThinking?: boolean;
+  thinkingBudgetTokens?: number;
+  fastMode?: boolean;
   enablePromptCaching?: boolean;
   onProgress?: ProgressCallback;
 }

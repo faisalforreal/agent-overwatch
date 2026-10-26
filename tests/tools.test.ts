@@ -104,7 +104,7 @@ describe('MCP Tools Implementation Suite', () => {
     const config = resolveConfig();
     const res = await executeStatus(config, router, tmpRepo);
 
-    expect(res.status.juniorModel).toBe('gemini-3.8-flash');
+    expect(res.status.juniorModel).toBe(config.juniorModel);
     expect(res.status.tierValidation.valid).toBe(true);
     expect(res.status.sessionCalls).toBe(0);
     expect(res.markdown).toContain('🛰️ Overwatch System Status');

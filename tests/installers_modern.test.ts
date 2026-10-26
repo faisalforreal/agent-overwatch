@@ -127,4 +127,43 @@ describe('Modern Client Rules & Config Installers Suite', () => {
     const tomlAfter = fs.readFileSync(paths.mcpConfigPath!, 'utf-8');
     expect(tomlAfter).not.toContain(`[mcp_servers.${APP_NAME}]`);
   });
+
+  it('installs VS Code / Cline with cline_mcp_settings.json AND workspace .clinerules', () => {
+    const res = installForClient('vscode', {
+      customHome: tmpHome,
+      workspaceRoot: tmpWs,
+    });
+    expect(res.status).toBe('installed');
+
+    const paths = getClientPaths('vscode', tmpHome, tmpWs);
+    expect(fs.existsSync(paths.mcpConfigPath!)).toBe(true);
+    expect(paths.rulesPath).toBe(path.join(tmpWs, '.clinerules'));
+    expect(fs.existsSync(paths.rulesPath!)).toBe(true);
+
+    const clineRules = fs.readFileSync(paths.rulesPath!, 'utf-8');
+    expect(clineRules).toContain(`${APP_NAME.toUpperCase()} Mandatory Checkpoint Protocol`);
+
+    // Uninstall removes .clinerules
+    installForClient('vscode', {
+      uninstall: true,
+      customHome: tmpHome,
+      workspaceRoot: tmpWs,
+    });
+    expect(fs.existsSync(paths.rulesPath!)).toBe(false);
+  });
+
+  it('installs Codex with ~/.codex/config.toml AND workspace AGENTS.md rules', () => {
+    installForClient('codex', {
+      customHome: tmpHome,
+      workspaceRoot: tmpWs,
+    });
+
+    const paths = getClientPaths('codex', tmpHome, tmpWs);
+    expect(fs.existsSync(paths.mcpConfigPath!)).toBe(true);
+    expect(paths.rulesPath).toBe(path.join(tmpWs, 'AGENTS.md'));
+    expect(fs.existsSync(paths.rulesPath!)).toBe(true);
+
+    const agentsMd = fs.readFileSync(paths.rulesPath!, 'utf-8');
+    expect(agentsMd).toContain('BEGIN OVERWATCH RULES');
+  });
 });

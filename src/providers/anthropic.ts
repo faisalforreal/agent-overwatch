@@ -115,9 +115,14 @@ export class AnthropicProvider implements MentorProvider {
         messages: [{ role: 'user', content: options.userPrompt }],
       };
 
-      if (options.enableThinking && /sonnet|opus|reason/i.test(targetModel)) {
-        body.thinking = { type: 'enabled', budget_tokens: 2048 };
-        if (body.max_tokens < 4096) body.max_tokens = 4096;
+      if (
+        options.enableThinking &&
+        !options.fastMode &&
+        /sonnet|opus|reason/i.test(targetModel)
+      ) {
+        const budget = options.thinkingBudgetTokens || 2048;
+        body.thinking = { type: 'enabled', budget_tokens: budget };
+        if (body.max_tokens < budget + 1024) body.max_tokens = budget + 1024;
       }
 
       const res = await fetch(`${this.baseUrl}/v1/messages`, {

@@ -18,9 +18,9 @@ describe('Semantic Notes Compaction & 10KB Cap Suite', () => {
 - Guideline: Keep component files under 300 lines`;
 
     const summary = summarizeOldNotes(raw);
-    expect(summary).toContain('Core Architectural Decisions');
-    expect(summary).toContain('Active Constraints & Requirements');
-    expect(summary).toContain('Explicitly Rejected Approaches');
+    expect(summary).toContain('## Architectural Decisions');
+    expect(summary).toContain('## System Constraints');
+    expect(summary).toContain('## Rejected Approaches');
     expect(summary).toContain('SQLite with WAL mode');
     expect(summary).toContain('Never execute commands outside repo directory');
     expect(summary).toContain('MongoDB was rejected');
@@ -43,8 +43,8 @@ describe('Semantic Notes Compaction & 10KB Cap Suite', () => {
     const compactedBytes = Buffer.byteLength(compacted, 'utf-8');
 
     expect(compactedBytes).toBeLessThanOrEqual(10 * 1024);
-    expect(compacted).toContain('Core Architectural Decisions');
-    expect(compacted).toContain('Active Constraints & Requirements');
-    expect(compacted).toContain('Explicitly Rejected Approaches');
+    expect(compacted).toContain('## Architectural Decisions');
+    expect(compacted).toContain('## System Constraints');
+    expect(compacted).toContain('## Rejected Approaches');
   });
 });

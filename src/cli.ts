@@ -179,20 +179,25 @@ export function createCli(): Command {
       const updatedMentor = mentor.trim() || current.mentorModel;
 
       // Tier check
-      const tierRes = validateMentorSuperiority(updatedMentor, updatedJunior);
+      const tierRes = validateMentorSuperiority(updatedMentor, updatedJunior, {
+        allowSameTier: current.allowSameTier,
+      });
+      let allowOverride = false;
       if (!tierRes.valid) {
         console.log(`\n⚠️  WARNING: ${tierRes.warning}`);
-        const confirm = await ask(`Do you wish to keep this configuration anyway? (y/N): `);
+        const confirm = await ask(`Do you wish to keep this configuration anyway (force override)? (y/N): `);
         if (confirm.toLowerCase() !== 'y') {
           console.log(`Configuration aborted.`);
           rl.close();
           return;
         }
+        allowOverride = true;
       }
 
       const newConfig: Partial<OverwatchConfig> = {
         juniorModel: updatedJunior,
         mentorModel: updatedMentor,
+        allowSameTier: allowOverride || current.allowSameTier,
       };
 
       if (openrouter.trim()) newConfig.openrouterApiKey = openrouter.trim();

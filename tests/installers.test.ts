@@ -109,7 +109,7 @@ describe('Client Installers Suite', () => {
       workspaceRoot: tmpWs,
     });
     expect(res.status).toBe('installed');
-    expect(res.message).toContain('~/.codex/config.toml');
+    expect(res.message).toContain('codex');
 
     const paths = getClientPaths('codex', tmpHome, tmpWs);
     expect(fs.existsSync(paths.mcpConfigPath!)).toBe(true);

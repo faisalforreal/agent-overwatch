@@ -12,7 +12,8 @@ export async function executeVerify(
   input: OverwatchVerifyInput,
   router: ProviderRouter,
   maxBudgetCalls?: number,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
+  timeoutMs?: number
 ): Promise<{ feedback: OverwatchFeedback; markdown: string }> {
   const budget = checkBudget(maxBudgetCalls);
   if (!budget.allowed) {
@@ -46,6 +47,7 @@ export async function executeVerify(
     userPrompt: prompt,
     notesContext: notes,
     onProgress,
+    timeoutMs,
   });
 
   if (feedback.notes_to_save && feedback.notes_to_save.length > 0) {

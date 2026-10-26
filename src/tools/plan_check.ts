@@ -13,7 +13,8 @@ export async function executePlanCheck(
   input: OverwatchPlanCheckInput,
   router: ProviderRouter,
   maxBudgetCalls?: number,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
+  timeoutMs?: number
 ): Promise<{ feedback: OverwatchFeedback; markdown: string }> {
   const budget = checkBudget(maxBudgetCalls);
   if (!budget.allowed) {
@@ -56,6 +57,7 @@ export async function executePlanCheck(
     userPrompt: prompt,
     notesContext: notes,
     onProgress,
+    timeoutMs,
   });
 
   if (input.repo_path && feedback.notes_to_save && feedback.notes_to_save.length > 0) {

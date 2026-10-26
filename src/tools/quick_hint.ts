@@ -11,7 +11,8 @@ export async function executeQuickHint(
   router: ProviderRouter,
   repoPath?: string,
   maxBudgetCalls?: number,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
+  timeoutMs?: number
 ): Promise<{ feedback: OverwatchFeedback; markdown: string }> {
   const budget = checkBudget(maxBudgetCalls);
   if (!budget.allowed) {
@@ -34,6 +35,7 @@ export async function executeQuickHint(
     systemPrompt: OVERWATCH_SYSTEM_PROMPT,
     userPrompt: prompt,
     onProgress,
+    timeoutMs,
   });
 
   recordCallUsage(repoPath, 'overwatch_quick_hint', 'mentor', feedback.usage);

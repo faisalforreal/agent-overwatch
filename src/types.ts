@@ -100,7 +100,7 @@ export type OverwatchStatusInput = z.infer<typeof OverwatchStatusInputSchema>;
 export interface ModelEntry {
   pattern: string;
   tier: ModelTier;
-  rank: number; // 1 to 100 for intra-tier capability ordering
+  ordinal?: number; // Ordinal priority within tier (1 to 3)
   reasoning: boolean;
   description: string;
 }

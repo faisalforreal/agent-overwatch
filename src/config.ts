@@ -8,6 +8,8 @@ import {
   DEFAULT_SESSION_CALL_CAP,
   DEFAULT_MAX_OUTPUT_TOKENS,
   DEFAULT_TIMEOUT_MS,
+  DEFAULT_TOOL_TIMEOUTS,
+  DEFAULT_THINKING_BUDGET,
 } from './constants.js';
 
 // Load .env if present in current working directory
@@ -34,12 +36,16 @@ export interface OverwatchConfig {
   maxCallsPerSession: number;
   maxOutputTokens: number;
   requestTimeoutMs: number;
+  toolTimeouts: Record<string, number>;
 
   includeGlobs: string[];
   excludeGlobs: string[];
 
   enableThinking: boolean;
+  thinkingBudgetTokens: number;
+  fastMode: boolean;
   enablePromptCaching: boolean;
+  allowSameTier: boolean;
 }
 
 export function maskApiKey(key?: string): string {
@@ -101,7 +107,6 @@ export function resolveConfig(
 ): OverwatchConfig {
   const fileConfig = loadConfigFile(customConfigPath);
 
-  // Environment variables
   const envOpenRouter = process.env.OPENROUTER_API_KEY;
   const envAnthropic = process.env.ANTHROPIC_API_KEY;
   const envGemini = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
@@ -133,13 +138,13 @@ export function resolveConfig(
       overrides.juniorModel ??
       envJuniorModel ??
       fileConfig.juniorModel ??
-      'gemini-3.8-flash',
+      'gemini-2.0-flash',
 
     mentorModel:
       overrides.mentorModel ??
       envMentorModel ??
       fileConfig.mentorModel ??
-      'claude-opus-5',
+      'claude-3-opus-20240229',
 
     mentorFallbacks:
       overrides.mentorFallbacks ?? fileConfig.mentorFallbacks ?? [],
@@ -160,6 +165,12 @@ export function resolveConfig(
       envTimeout ??
       fileConfig.requestTimeoutMs ??
       DEFAULT_TIMEOUT_MS,
+
+    toolTimeouts: {
+      ...DEFAULT_TOOL_TIMEOUTS,
+      ...(fileConfig.toolTimeouts || {}),
+      ...(overrides.toolTimeouts || {}),
+    },
 
     includeGlobs:
       overrides.includeGlobs ?? fileConfig.includeGlobs ?? ['**/*'],
@@ -183,7 +194,18 @@ export function resolveConfig(
     enableThinking:
       overrides.enableThinking ?? fileConfig.enableThinking ?? true,
 
+    thinkingBudgetTokens:
+      overrides.thinkingBudgetTokens ??
+      fileConfig.thinkingBudgetTokens ??
+      DEFAULT_THINKING_BUDGET,
+
+    fastMode:
+      overrides.fastMode ?? fileConfig.fastMode ?? false,
+
     enablePromptCaching:
       overrides.enablePromptCaching ?? fileConfig.enablePromptCaching ?? true,
+
+    allowSameTier:
+      overrides.allowSameTier ?? fileConfig.allowSameTier ?? false,
   };
 }

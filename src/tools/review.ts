@@ -12,9 +12,10 @@ import { validateMentorSuperiority } from '../tiers.js';
 export async function executeReview(
   input: OverwatchReviewInput,
   router: ProviderRouter,
-  juniorModel = 'gemini-3.8-flash',
+  juniorModel = 'gemini-2.0-flash',
   maxBudgetCalls?: number,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
+  timeoutMs?: number
 ): Promise<{ feedback: OverwatchFeedback; markdown: string }> {
   if (input.mentor_model) {
     const tierCheck = validateMentorSuperiority(input.mentor_model, juniorModel);
@@ -64,6 +65,7 @@ export async function executeReview(
     notesContext: notes,
     model: input.mentor_model,
     onProgress,
+    timeoutMs,
   });
 
   if (input.repo_path && feedback.notes_to_save && feedback.notes_to_save.length > 0) {
