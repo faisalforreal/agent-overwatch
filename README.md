@@ -75,14 +75,14 @@ npx overwatch setup --client antigravity
 
 ### Supported Clients
 
-Client | Registration Location | Status
-:--- | :--- | :---
-**Antigravity** | `~/.gemini/config/mcp_config.json` & `skills/overwatch/` | ✅ Docs-Verified
-**Claude Code** | `~/.claude.json` (`mcpServers`) & `CLAUDE.md` | ✅ Docs-Verified
-**Cursor** | `~/.cursor/mcp.json` & `.cursorrules` | ✅ Docs-Verified
-**Windsurf** | `~/.codeium/windsurf/mcp_config.json` & `.windsurfrules` | ✅ Docs-Verified
-**VS Code (Cline)** | `cline_mcp_settings.json` (macOS, Windows, Linux) | ✅ Docs-Verified
-**Codex** | Manual CLI registration: `codex mcp add overwatch -- overwatch serve` | 📝 Manual
+Client | Registration Location | Rules / Skill Path | Configuration Mode
+:--- | :--- | :--- | :---
+**Antigravity** | `~/.gemini/config/mcp_config.json` | `~/.gemini/config/skills/overwatch/SKILL.md` & `AGENTS.md` | ✅ Automated (Docs-Verified)
+**Claude Code** | `~/.claude.json` (`mcpServers`) | `~/.claude/skills/overwatch/SKILL.md` & `CLAUDE.md` | ✅ Automated (Docs-Verified)
+**Cursor** | `~/.cursor/mcp.json` | `.cursor/rules/overwatch.mdc` (`alwaysApply: true`) | ✅ Automated (Docs-Verified)
+**Windsurf** | `~/.codeium/windsurf/mcp_config.json` | `.windsurf/rules/overwatch.md` (`Activation Mode: Always On`) | ✅ Automated (Docs-Verified)
+**VS Code (Cline)** | `cline_mcp_settings.json` (macOS, Windows, Linux) | Global MCP settings | ✅ Automated (Docs-Verified)
+**Codex** | `~/.codex/config.toml` (`[mcp_servers.overwatch]`) | Global Codex TOML | ✅ Automated (Docs-Verified)
 
 You can also install across all detected clients at once:
 ```bash
