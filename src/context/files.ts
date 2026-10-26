@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { DEFAULT_MAX_FILE_BYTES } from '../constants.js';
+import { DEFAULT_MAX_FILE_BYTES, LOG_PREFIX } from '../constants.js';
 import { redactSecrets, isSensitiveFilename } from './redactor.js';
 
 export interface FileContextItem {
@@ -45,7 +45,7 @@ export function readFileSafely(
   }
 
   if (!isPathSafe(repoPath, relativePath)) {
-    console.error(`[overwatch] Blocked potential path traversal: ${relativePath}`);
+    console.error(`${LOG_PREFIX} Blocked potential path traversal: ${relativePath}`);
     return null;
   }
 
@@ -73,7 +73,7 @@ export function readFileSafely(
       truncated,
     };
   } catch (err) {
-    console.error(`[overwatch] Failed to read ${relativePath}:`, err);
+    console.error(`${LOG_PREFIX} Failed to read ${relativePath}:`, err);
     return null;
   }
 }

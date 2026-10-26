@@ -1,6 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { TARGET_NOTES_DIR, NOTES_FILE, DEFAULT_MAX_NOTES_BYTES } from '../constants.js';
+import {
+  APP_NAME,
+  TARGET_NOTES_DIR,
+  NOTES_FILE,
+  DEFAULT_MAX_NOTES_BYTES,
+  LOG_PREFIX,
+} from '../constants.js';
 
 export function getRepoNotesPath(repoPath: string): string {
   return path.join(repoPath, TARGET_NOTES_DIR, NOTES_FILE);
@@ -13,7 +19,7 @@ export function readRepoNotes(repoPath: string): string {
       return fs.readFileSync(notesPath, 'utf-8');
     }
   } catch (err) {
-    console.error(`[overwatch] Failed to read notes at ${notesPath}:`, err);
+    console.error(`${LOG_PREFIX} Failed to read notes at ${notesPath}:`, err);
   }
   return '';
 }
@@ -84,7 +90,7 @@ export function summarizeOldNotes(rawContent: string): string {
     }
   }
 
-  let summary = `# Overwatch Project Memory (NOTES.md)\n\n`;
+  let summary = `# ${APP_NAME.toUpperCase()} Project Memory (${NOTES_FILE})\n\n`;
   summary += `> [System Memory: Synthesized architectural constraints, decisions, and rejected approaches. Do not violate.]\n\n`;
 
   // Constraints and Rejected approaches are CRITICAL: preserve up to 30 each without starvation
@@ -193,7 +199,7 @@ export function appendRepoNotes(
     if (fs.existsSync(notesPath)) {
       existing = fs.readFileSync(notesPath, 'utf-8');
     } else {
-      existing = `# Overwatch Project Memory (NOTES.md)\n\nThis file preserves core senior architectural decisions, rejected approaches, and constraints.\nThe junior agent must inspect this file at the start of every iteration.\n\n`;
+      existing = `# ${APP_NAME.toUpperCase()} Project Memory (${NOTES_FILE})\n\nThis file preserves core senior architectural decisions, rejected approaches, and constraints.\nThe junior agent must inspect this file at the start of every iteration.\n\n`;
     }
 
     const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
@@ -207,6 +213,6 @@ export function appendRepoNotes(
 
     fs.writeFileSync(notesPath, fullContent, 'utf-8');
   } catch (err) {
-    console.error(`[overwatch] Failed to write notes to ${notesPath}:`, err);
+    console.error(`${LOG_PREFIX} Failed to write notes to ${notesPath}:`, err);
   }
 }

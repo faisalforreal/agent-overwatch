@@ -7,6 +7,7 @@ import {
   loadStoredUsage,
 } from '../budget/tracker.js';
 import { getRepoNotesPath } from '../context/notes.js';
+import { APP_NAME } from '../constants.js';
 
 export interface OverwatchStatusResult {
   juniorModel: string;
@@ -52,15 +53,16 @@ export async function executeStatus(
   let lifetimeUsage: OverwatchStatusResult['lifetimeUsage'];
   let notesMemory: OverwatchStatusResult['notesMemory'];
 
-  if (repoPath) {
-    const stored = loadStoredUsage(repoPath);
+  const targetRepo = repoPath || process.cwd();
+  if (targetRepo) {
+    const stored = loadStoredUsage(targetRepo);
     lifetimeUsage = {
       totalCalls: stored.totalCalls,
       totalTokens: stored.totalTokens,
       totalSpendUsd: stored.totalSpendUsd,
     };
 
-    const notesPath = getRepoNotesPath(repoPath);
+    const notesPath = getRepoNotesPath(targetRepo);
     if (fs.existsSync(notesPath)) {
       notesMemory = {
         exists: true,
@@ -88,7 +90,8 @@ export async function executeStatus(
     notesMemory,
   };
 
-  let md = `### 🛰️ Overwatch System Status\n\n`;
+  const titleName = APP_NAME.charAt(0).toUpperCase() + APP_NAME.slice(1);
+  let md = `### 🛰️ ${titleName} System Status\n\n`;
   md += `- **Junior Model:** \`${config.juniorModel}\` (Tier: **${tierRes.juniorTier}**)\n`;
   md += `- **Mentor Model:** \`${config.mentorModel}\` (Tier: **${tierRes.mentorTier}**)\n`;
   md += `- **Tier Hierarchy:** ${tierRes.valid ? '✅ Superiority Validated' : '⚠️ WARNING: ' + tierRes.warning}\n`;

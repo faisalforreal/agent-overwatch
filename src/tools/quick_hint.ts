@@ -5,6 +5,7 @@ import { OVERWATCH_SYSTEM_PROMPT } from '../prompts/system.js';
 import { buildQuickHintPrompt } from '../prompts/templates.js';
 import { formatFeedbackAsMarkdown } from '../prompts/parser.js';
 import { checkBudget, recordCallUsage } from '../budget/tracker.js';
+import { TOOL_QUICK_HINT } from '../constants.js';
 
 export async function executeQuickHint(
   input: OverwatchQuickHintInput,
@@ -38,7 +39,8 @@ export async function executeQuickHint(
     timeoutMs,
   });
 
-  recordCallUsage(repoPath, 'overwatch_quick_hint', 'mentor', feedback.usage);
+  const targetRepo = repoPath || input.repo_path || process.cwd();
+  recordCallUsage(targetRepo, TOOL_QUICK_HINT, 'mentor', feedback.usage);
 
   return {
     feedback,

@@ -1,6 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { TARGET_NOTES_DIR, USAGE_FILE, DEFAULT_SESSION_CALL_CAP } from '../constants.js';
+import {
+  APP_NAME,
+  TARGET_NOTES_DIR,
+  USAGE_FILE,
+  DEFAULT_SESSION_CALL_CAP,
+  LOG_PREFIX,
+} from '../constants.js';
 import { UsageStats } from '../types.js';
 
 export interface UsageRecord {
@@ -44,7 +50,7 @@ export function loadStoredUsage(repoPath: string): StoredUsage {
       return JSON.parse(content);
     }
   } catch (err) {
-    console.error(`[overwatch] Failed to read usage data at ${filePath}:`, err);
+    console.error(`${LOG_PREFIX} Failed to read usage data at ${filePath}:`, err);
   }
   return {
     totalCalls: 0,
@@ -65,7 +71,7 @@ export function saveStoredUsage(repoPath: string, data: StoredUsage): void {
     }
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
   } catch (err) {
-    console.error(`[overwatch] Failed to write usage data to ${filePath}:`, err);
+    console.error(`${LOG_PREFIX} Failed to write usage data to ${filePath}:`, err);
   }
 }
 
@@ -87,7 +93,7 @@ export function checkBudget(
       sessionCalls: inMemorySessionCalls,
       remainingCalls: 0,
       maxCalls,
-      message: `Overwatch session call cap of ${maxCalls} calls reached. The junior agent must now proceed independently with implementation and tests.`,
+      message: `${APP_NAME.toUpperCase()} session call cap of ${maxCalls} calls reached. The junior agent must now proceed independently with implementation and tests.`,
     };
   }
 
@@ -107,9 +113,8 @@ export function recordCallUsage(
 ): void {
   inMemorySessionCalls++;
 
-  if (!repoPath) return;
-
-  const current = loadStoredUsage(repoPath);
+  const targetRepo = repoPath || process.cwd();
+  const current = loadStoredUsage(targetRepo);
   const promptTokens = usage?.prompt_tokens || 0;
   const completionTokens = usage?.completion_tokens || 0;
   const totalTokens = usage?.total_tokens || promptTokens + completionTokens;
@@ -137,5 +142,5 @@ export function recordCallUsage(
     current.history = current.history.slice(-100);
   }
 
-  saveStoredUsage(repoPath, current);
+  saveStoredUsage(targetRepo, current);
 }

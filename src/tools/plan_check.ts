@@ -8,6 +8,7 @@ import { gatherGitContext } from '../context/git.js';
 import { gatherRelevantFiles } from '../context/files.js';
 import { readRepoNotes, appendRepoNotes } from '../context/notes.js';
 import { checkBudget, recordCallUsage } from '../budget/tracker.js';
+import { TOOL_PLAN_CHECK } from '../constants.js';
 
 export async function executePlanCheck(
   input: OverwatchPlanCheckInput,
@@ -31,17 +32,18 @@ export async function executePlanCheck(
     return { feedback: budgetFb, markdown: formatFeedbackAsMarkdown(budgetFb) };
   }
 
+  const repoPath = input.repo_path || process.cwd();
   let gitStatus = '';
   let relevantFilesContent = '';
   let notes = '';
 
-  if (input.repo_path) {
+  if (repoPath) {
     if (onProgress) onProgress(10, 100, 'Gathering repository status and context files...');
-    const gitCtx = gatherGitContext(input.repo_path);
+    const gitCtx = gatherGitContext(repoPath);
     gitStatus = gitCtx.gitStatus || '';
-    const filesCtx = gatherRelevantFiles(input.repo_path, input.relevant_files);
+    const filesCtx = gatherRelevantFiles(repoPath, input.relevant_files);
     relevantFilesContent = filesCtx.combinedFormatted;
-    notes = readRepoNotes(input.repo_path);
+    notes = readRepoNotes(repoPath);
   }
 
   const prompt = buildPlanCheckPrompt(input, {
@@ -60,11 +62,11 @@ export async function executePlanCheck(
     timeoutMs,
   });
 
-  if (input.repo_path && feedback.notes_to_save && feedback.notes_to_save.length > 0) {
-    appendRepoNotes(input.repo_path, feedback.notes_to_save);
+  if (repoPath && feedback.notes_to_save && feedback.notes_to_save.length > 0) {
+    appendRepoNotes(repoPath, feedback.notes_to_save);
   }
 
-  recordCallUsage(input.repo_path, 'overwatch_plan_check', 'mentor', feedback.usage);
+  recordCallUsage(repoPath, TOOL_PLAN_CHECK, 'mentor', feedback.usage);
 
   return {
     feedback,

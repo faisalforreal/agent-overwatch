@@ -81,12 +81,41 @@ Client | Registration Location | Rules / Skill Path | Configuration Mode
 **Claude Code** | `~/.claude.json` (`mcpServers`) | `~/.claude/skills/overwatch/SKILL.md` & `CLAUDE.md` | ✅ Automated (Docs-Verified)
 **Cursor** | `~/.cursor/mcp.json` | `.cursor/rules/overwatch.mdc` (`alwaysApply: true`) | ✅ Automated (Docs-Verified)
 **Windsurf** | `~/.codeium/windsurf/mcp_config.json` | `.windsurf/rules/overwatch.md` (`Activation Mode: Always On`) | ✅ Automated (Docs-Verified)
-**VS Code (Cline)** | `cline_mcp_settings.json` (macOS, Windows, Linux) | Global MCP settings | ✅ Automated (Docs-Verified)
-**Codex** | `~/.codex/config.toml` (`[mcp_servers.overwatch]`) | Global Codex TOML | ✅ Automated (Docs-Verified)
+**VS Code (Cline)** | `cline_mcp_settings.json` (macOS, Windows, Linux) | Workspace `.clinerules` | ✅ Automated (Docs-Verified)
+**Codex** | `~/.codex/config.toml` (`[mcp_servers.overwatch]`) | Workspace `AGENTS.md` | ✅ Automated (Docs-Verified)
 
 You can also install across all detected clients at once:
 ```bash
 npx overwatch setup --client all
+```
+
+---
+
+## Reasoning Timeouts & Fast Mode
+
+Deep architectural mentor models (Claude Opus, OpenAI o3, Claude 3.7 Sonnet extended thinking) often take 45–90s to reason through full repository context.
+
+### Timeout Protections:
+- **Default Server Timeout**: Set to **180s** (3 minutes) to ensure legitimate reasoning calls are never aborted mid-flight.
+- **Per-Tool Timeouts**:
+  - `overwatch_plan_check`: 180s
+  - `overwatch_verify`: 180s
+  - `overwatch_review`: 120s
+  - `overwatch_checkpoint`: 90s
+  - `overwatch_quick_hint`: 45s
+- **Keep-Alive Ticker**: During long reasoning calls, Overwatch dispatches continuous MCP progress notifications (`notifications/progress`) and log tickers to reset client connection drop timers.
+
+### Client Timeout Notice:
+Some AI agent clients enforce their own client-side tool call timeout (e.g. 60s or 120s) which cannot be overridden by an MCP server. If your client drops long tool calls, configure faster mentor settings in `~/.overwatch/config.json`:
+```json
+{
+  "fastMode": true,
+  "thinkingBudgetTokens": 1024,
+  "toolTimeouts": {
+    "overwatch_plan_check": 90000,
+    "overwatch_verify": 90000
+  }
+}
 ```
 
 ---

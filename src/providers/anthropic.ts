@@ -4,16 +4,26 @@ import {
   ProviderRequestOptions,
 } from './base.js';
 import { UsageStats } from '../types.js';
+import { DEFAULT_TIMEOUT_MS } from '../constants.js';
+import { getModelDefaults, estimateModelCost } from '../tiers.js';
 
 export class AnthropicProvider implements MentorProvider {
   public name = 'anthropic';
-  public defaultModel = 'claude-opus-5';
+  public defaultModel: string;
   private apiKey: string;
   private baseUrl: string;
 
-  constructor(apiKey: string, baseUrl = 'https://api.anthropic.com') {
+  constructor(
+    apiKey: string,
+    baseUrl = 'https://api.anthropic.com',
+    defaultModel?: string
+  ) {
     this.apiKey = apiKey;
     this.baseUrl = baseUrl.replace(/\/+$/, '');
+    this.defaultModel =
+      defaultModel ||
+      getModelDefaults().providerDefaults?.anthropic ||
+      getModelDefaults().mentor;
   }
 
   async healthCheck(model?: string): Promise<ProviderHealth> {
@@ -156,9 +166,8 @@ export class AnthropicProvider implements MentorProvider {
       const completionTokens = data.usage?.output_tokens || 0;
       const totalTokens = promptTokens + completionTokens;
 
-      // Approximate cost calculation ($15/M input, $75/M output for Opus)
-      const cost =
-        (promptTokens / 1_000_000) * 15.0 + (completionTokens / 1_000_000) * 75.0;
+      // Dynamic cost estimation based on model seed data
+      const cost = estimateModelCost(targetModel, promptTokens, completionTokens);
 
       return {
         rawText,
@@ -172,7 +181,7 @@ export class AnthropicProvider implements MentorProvider {
     } catch (err: any) {
       if (err.name === 'AbortError') {
         throw new Error(
-          `Request to Anthropic timed out after ${options.timeoutMs || 90000}ms.`
+          `Request to Anthropic timed out after ${options.timeoutMs || DEFAULT_TIMEOUT_MS}ms.`
         );
       }
       throw err;

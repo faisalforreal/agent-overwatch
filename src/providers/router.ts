@@ -7,6 +7,7 @@ import { OpenRouterProvider } from './openrouter.js';
 import { MockProvider } from './mock.js';
 import { parseOverwatchFeedback } from '../prompts/parser.js';
 import { OverwatchFeedback } from '../types.js';
+import { LOG_PREFIX } from '../constants.js';
 
 export interface RouteResolution {
   provider: MentorProvider;
@@ -174,7 +175,7 @@ export class ProviderRouter {
       } catch (err: any) {
         lastError = err;
         console.error(
-          `[overwatch] Provider call failed for model '${candidate.model}':`,
+          `${LOG_PREFIX} Provider call failed for model '${candidate.model}':`,
           err?.message || err
         );
         // Continue to next fallback in ladder

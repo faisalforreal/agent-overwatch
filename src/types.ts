@@ -81,6 +81,7 @@ export const OverwatchQuickHintInputSchema = z.object({
   problem_description: z.string().describe('Brief description of where the agent is stuck'),
   error_or_log: z.string().describe('The exact error message, stack trace, or compiler error'),
   attempted_fix: z.string().optional().describe('What the junior agent tried and why it failed'),
+  repo_path: z.string().optional().describe('Absolute path to repository root for tracking and context'),
 });
 export type OverwatchQuickHintInput = z.infer<typeof OverwatchQuickHintInputSchema>;
 
@@ -103,9 +104,18 @@ export interface ModelEntry {
   ordinal?: number; // Ordinal priority within tier (1 to 3)
   reasoning: boolean;
   description: string;
+  inputCostPerMillion?: number;
+  outputCostPerMillion?: number;
+}
+
+export interface ModelDefaults {
+  junior: string;
+  mentor: string;
+  providerDefaults?: Record<string, string>;
 }
 
 export interface ModelsData {
   version: string;
+  defaults?: ModelDefaults;
   models: ModelEntry[];
 }

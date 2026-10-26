@@ -3,6 +3,7 @@ import path from 'node:path';
 import os from 'node:os';
 import dotenv from 'dotenv';
 import {
+  APP_NAME,
   CONFIG_DIR_NAME,
   CONFIG_FILE,
   DEFAULT_SESSION_CALL_CAP,
@@ -10,7 +11,9 @@ import {
   DEFAULT_TIMEOUT_MS,
   DEFAULT_TOOL_TIMEOUTS,
   DEFAULT_THINKING_BUDGET,
+  LOG_PREFIX,
 } from './constants.js';
+import { getModelDefaults } from './tiers.js';
 
 // Load .env if present in current working directory
 dotenv.config();
@@ -71,7 +74,7 @@ export function loadConfigFile(customPath?: string): Partial<OverwatchConfig> {
       return JSON.parse(content);
     }
   } catch (err) {
-    console.error(`[overwatch] Warning: Failed to parse config file at ${filePath}:`, err);
+    console.error(`${LOG_PREFIX} Warning: Failed to parse config file at ${filePath}:`, err);
   }
   return {};
 }
@@ -106,6 +109,8 @@ export function resolveConfig(
   customConfigPath?: string
 ): OverwatchConfig {
   const fileConfig = loadConfigFile(customConfigPath);
+  const modelDefaults = getModelDefaults();
+  const envPrefix = APP_NAME.toUpperCase();
 
   const envOpenRouter = process.env.OPENROUTER_API_KEY;
   const envAnthropic = process.env.ANTHROPIC_API_KEY;
@@ -113,14 +118,16 @@ export function resolveConfig(
   const envOpenAI = process.env.OPENAI_API_KEY;
   const envOpenAIBaseUrl = process.env.OPENAI_BASE_URL;
 
-  const envJuniorModel = process.env.OVERWATCH_JUNIOR_MODEL;
-  const envMentorModel = process.env.OVERWATCH_MENTOR_MODEL;
-  const envMaxCalls = process.env.OVERWATCH_MAX_CALLS
-    ? parseInt(process.env.OVERWATCH_MAX_CALLS, 10)
-    : undefined;
-  const envTimeout = process.env.OVERWATCH_TIMEOUT_MS
-    ? parseInt(process.env.OVERWATCH_TIMEOUT_MS, 10)
-    : undefined;
+  const envJuniorModel =
+    process.env[`${envPrefix}_JUNIOR_MODEL`] || process.env.OVERWATCH_JUNIOR_MODEL;
+  const envMentorModel =
+    process.env[`${envPrefix}_MENTOR_MODEL`] || process.env.OVERWATCH_MENTOR_MODEL;
+  const envMaxCallsStr =
+    process.env[`${envPrefix}_MAX_CALLS`] || process.env.OVERWATCH_MAX_CALLS;
+  const envMaxCalls = envMaxCallsStr ? parseInt(envMaxCallsStr, 10) : undefined;
+  const envTimeoutStr =
+    process.env[`${envPrefix}_TIMEOUT_MS`] || process.env.OVERWATCH_TIMEOUT_MS;
+  const envTimeout = envTimeoutStr ? parseInt(envTimeoutStr, 10) : undefined;
 
   return {
     openrouterApiKey:
@@ -138,13 +145,13 @@ export function resolveConfig(
       overrides.juniorModel ??
       envJuniorModel ??
       fileConfig.juniorModel ??
-      'gemini-2.0-flash',
+      modelDefaults.junior,
 
     mentorModel:
       overrides.mentorModel ??
       envMentorModel ??
       fileConfig.mentorModel ??
-      'claude-3-opus-20240229',
+      modelDefaults.mentor,
 
     mentorFallbacks:
       overrides.mentorFallbacks ?? fileConfig.mentorFallbacks ?? [],
@@ -188,7 +195,7 @@ export function resolveConfig(
         'node_modules/**',
         'dist/**',
         '.git/**',
-        '.overwatch/**',
+        `.${APP_NAME}/**`,
       ],
 
     enableThinking:

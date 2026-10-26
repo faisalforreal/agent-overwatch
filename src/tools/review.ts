@@ -7,20 +7,23 @@ import { formatFeedbackAsMarkdown } from '../prompts/parser.js';
 import { gatherGitContext } from '../context/git.js';
 import { readRepoNotes, appendRepoNotes } from '../context/notes.js';
 import { checkBudget, recordCallUsage } from '../budget/tracker.js';
-import { validateMentorSuperiority } from '../tiers.js';
+import { validateMentorSuperiority, getModelDefaults } from '../tiers.js';
+import { TOOL_REVIEW, LOG_PREFIX } from '../constants.js';
 
 export async function executeReview(
   input: OverwatchReviewInput,
   router: ProviderRouter,
-  juniorModel = 'gemini-2.0-flash',
+  juniorModel?: string,
   maxBudgetCalls?: number,
   onProgress?: ProgressCallback,
   timeoutMs?: number
 ): Promise<{ feedback: OverwatchFeedback; markdown: string }> {
+  const resolvedJunior = juniorModel || getModelDefaults().junior;
+
   if (input.mentor_model) {
-    const tierCheck = validateMentorSuperiority(input.mentor_model, juniorModel);
+    const tierCheck = validateMentorSuperiority(input.mentor_model, resolvedJunior);
     if (!tierCheck.valid) {
-      console.error(`[overwatch] Warning: ${tierCheck.warning}`);
+      console.error(`${LOG_PREFIX} Warning: ${tierCheck.warning}`);
     }
   }
 
@@ -39,16 +42,17 @@ export async function executeReview(
     return { feedback: budgetFb, markdown: formatFeedbackAsMarkdown(budgetFb) };
   }
 
+  const repoPath = input.repo_path || process.cwd();
   let gitDiff = input.draft_code_or_diff || '';
   let notes = '';
 
-  if (input.repo_path) {
+  if (repoPath) {
     if (onProgress) onProgress(10, 100, 'Gathering git diff across repository...');
-    const gitCtx = gatherGitContext(input.repo_path);
+    const gitCtx = gatherGitContext(repoPath);
     if (gitCtx.gitDiff) {
       gitDiff = gitCtx.gitDiff;
     }
-    notes = readRepoNotes(input.repo_path);
+    notes = readRepoNotes(repoPath);
   }
 
   const prompt = buildReviewPrompt(input, {
@@ -68,13 +72,13 @@ export async function executeReview(
     timeoutMs,
   });
 
-  if (input.repo_path && feedback.notes_to_save && feedback.notes_to_save.length > 0) {
-    appendRepoNotes(input.repo_path, feedback.notes_to_save);
+  if (repoPath && feedback.notes_to_save && feedback.notes_to_save.length > 0) {
+    appendRepoNotes(repoPath, feedback.notes_to_save);
   }
 
   recordCallUsage(
-    input.repo_path,
-    'overwatch_review',
+    repoPath,
+    TOOL_REVIEW,
     input.mentor_model || 'mentor',
     feedback.usage
   );

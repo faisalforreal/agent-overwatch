@@ -4,16 +4,26 @@ import {
   ProviderRequestOptions,
 } from './base.js';
 import { UsageStats } from '../types.js';
+import { APP_NAME, DEFAULT_TIMEOUT_MS } from '../constants.js';
+import { getModelDefaults, estimateModelCost } from '../tiers.js';
 
 export class OpenRouterProvider implements MentorProvider {
   public name = 'openrouter';
-  public defaultModel = 'anthropic/claude-3-7-sonnet';
+  public defaultModel: string;
   private apiKey: string;
   private baseUrl: string;
 
-  constructor(apiKey: string, baseUrl = 'https://openrouter.ai/api/v1') {
+  constructor(
+    apiKey: string,
+    baseUrl = 'https://openrouter.ai/api/v1',
+    defaultModel?: string
+  ) {
     this.apiKey = apiKey;
     this.baseUrl = baseUrl.replace(/\/+$/, '');
+    this.defaultModel =
+      defaultModel ||
+      getModelDefaults().providerDefaults?.openrouter ||
+      getModelDefaults().mentor;
   }
 
   async healthCheck(model?: string): Promise<ProviderHealth> {
@@ -94,8 +104,8 @@ export class OpenRouterProvider implements MentorProvider {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${this.apiKey}`,
-          'HTTP-Referer': 'https://github.com/overwatch/overwatch',
-          'X-Title': 'overwatch',
+          'HTTP-Referer': `https://github.com/${APP_NAME}/${APP_NAME}`,
+          'X-Title': APP_NAME,
         },
         body: JSON.stringify(body),
         signal: controller.signal,
@@ -113,9 +123,10 @@ export class OpenRouterProvider implements MentorProvider {
       const completionTokens = data.usage?.completion_tokens || 0;
       const totalTokens = data.usage?.total_tokens || promptTokens + completionTokens;
 
-      // Estimate cost based on rough frontier rates ($10/M in, $40/M out)
+      // Dynamic cost estimation based on model seed data
       const cost =
-        (promptTokens / 1_000_000) * 10.0 + (completionTokens / 1_000_000) * 40.0;
+        (data.usage as any)?.cost ??
+        estimateModelCost(targetModel, promptTokens, completionTokens);
 
       return {
         rawText,
@@ -129,7 +140,7 @@ export class OpenRouterProvider implements MentorProvider {
     } catch (err: any) {
       if (err.name === 'AbortError') {
         throw new Error(
-          `Request to OpenRouter timed out after ${options.timeoutMs || 90000}ms.`
+          `Request to OpenRouter timed out after ${options.timeoutMs || DEFAULT_TIMEOUT_MS}ms.`
         );
       }
       throw err;

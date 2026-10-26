@@ -22,7 +22,7 @@ export function createCli(): Command {
 
   program
     .name(BIN_NAME)
-    .description(`Overwatch: Steer junior models with senior mentor models via MCP.`)
+    .description(`${APP_NAME.toUpperCase()}: Steer junior models with senior mentor models via MCP.`)
     .version('1.0.0');
 
   // Command: serve
@@ -86,16 +86,20 @@ export function createCli(): Command {
 
       // 5. Client Registrations
       console.log(`\nClient MCP Registrations:`);
-      const clients: SupportedClient[] = ['antigravity', 'claude_code', 'cursor', 'windsurf', 'vscode'];
+      const clients: SupportedClient[] = ['antigravity', 'claude_code', 'cursor', 'windsurf', 'vscode', 'codex'];
       for (const cl of clients) {
         const paths = getClientPaths(cl);
         let registered = false;
         if (paths.mcpConfigPath && fs.existsSync(paths.mcpConfigPath)) {
           try {
             const raw = fs.readFileSync(paths.mcpConfigPath, 'utf-8');
-            const parsed = JSON.parse(raw);
-            if (parsed.mcpServers?.[APP_NAME]) {
-              registered = true;
+            if (cl === 'codex') {
+              registered = raw.includes(`[mcp_servers.${APP_NAME}]`);
+            } else {
+              const parsed = JSON.parse(raw);
+              if (parsed.mcpServers?.[APP_NAME]) {
+                registered = true;
+              }
             }
           } catch {}
         }
@@ -116,7 +120,7 @@ export function createCli(): Command {
       'Target client (antigravity, claude_code, cursor, windsurf, vscode, codex, all)'
     )
     .option('--dry-run', 'Preview changes without modifying any files')
-    .option('--uninstall', 'Remove overwatch from the specified client')
+    .option('--uninstall', `Remove ${APP_NAME} from the specified client`)
     .action((opts) => {
       const client = opts.client as SupportedClient;
       const clientsToRun: SupportedClient[] =

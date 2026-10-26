@@ -4,16 +4,26 @@ import {
   ProviderRequestOptions,
 } from './base.js';
 import { UsageStats } from '../types.js';
+import { DEFAULT_TIMEOUT_MS } from '../constants.js';
+import { getModelDefaults, estimateModelCost } from '../tiers.js';
 
 export class GeminiProvider implements MentorProvider {
   public name = 'gemini';
-  public defaultModel = 'gemini-4-argon';
+  public defaultModel: string;
   private apiKey: string;
   private baseUrl: string;
 
-  constructor(apiKey: string, baseUrl = 'https://generativelanguage.googleapis.com') {
+  constructor(
+    apiKey: string,
+    baseUrl = 'https://generativelanguage.googleapis.com',
+    defaultModel?: string
+  ) {
     this.apiKey = apiKey;
     this.baseUrl = baseUrl.replace(/\/+$/, '');
+    this.defaultModel =
+      defaultModel ||
+      getModelDefaults().providerDefaults?.gemini ||
+      getModelDefaults().mentor;
   }
 
   async healthCheck(model?: string): Promise<ProviderHealth> {
@@ -119,9 +129,8 @@ export class GeminiProvider implements MentorProvider {
       const completionTokens = data.usageMetadata?.candidatesTokenCount || 0;
       const totalTokens = data.usageMetadata?.totalTokenCount || promptTokens + completionTokens;
 
-      // Approximate cost calculation ($2.50/M in, $10.00/M out for Gemini Argon/Pro)
-      const cost =
-        (promptTokens / 1_000_000) * 2.5 + (completionTokens / 1_000_000) * 10.0;
+      // Dynamic cost estimation based on model seed data
+      const cost = estimateModelCost(targetModel, promptTokens, completionTokens);
 
       return {
         rawText,
@@ -135,7 +144,7 @@ export class GeminiProvider implements MentorProvider {
     } catch (err: any) {
       if (err.name === 'AbortError') {
         throw new Error(
-          `Request to Gemini timed out after ${options.timeoutMs || 90000}ms.`
+          `Request to Gemini timed out after ${options.timeoutMs || DEFAULT_TIMEOUT_MS}ms.`
         );
       }
       throw err;

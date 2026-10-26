@@ -4,7 +4,17 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { APP_NAME } from './constants.js';
+import {
+  APP_NAME,
+  LOG_PREFIX,
+  TOOL_PLAN_CHECK,
+  TOOL_CHECKPOINT,
+  TOOL_REVIEW,
+  TOOL_QUICK_HINT,
+  TOOL_VERIFY,
+  TOOL_STATUS,
+  DEFAULT_TOOL_TIMEOUTS,
+} from './constants.js';
 import { resolveConfig, OverwatchConfig } from './config.js';
 import { ProviderRouter } from './providers/router.js';
 import { MockProvider } from './providers/mock.js';
@@ -57,7 +67,7 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
     return {
       tools: [
         {
-          name: 'overwatch_plan_check',
+          name: TOOL_PLAN_CHECK,
           description:
             'MANDATORY pre-implementation gate: Senior architect evaluates proposed plan against user goal, edge cases, and repo architecture before code is written.',
           inputSchema: {
@@ -89,7 +99,7 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
           },
         },
         {
-          name: 'overwatch_checkpoint',
+          name: TOOL_CHECKPOINT,
           description:
             'MANDATORY steering gate: Evaluates progress after every major milestone and after 2 consecutive failures. Inspects git diff and dictates the next 3-5 concrete steps and avoid list.',
           inputSchema: {
@@ -131,7 +141,7 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
           },
         },
         {
-          name: 'overwatch_review',
+          name: TOOL_REVIEW,
           description:
             'Full code review of real git diff or draft code: detects logic defects, race conditions, edge cases, and provides actionable coaching prompts.',
           inputSchema: {
@@ -166,7 +176,7 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
           },
         },
         {
-          name: 'overwatch_quick_hint',
+          name: TOOL_QUICK_HINT,
           description:
             'Targeted diagnosis to break out of debug loops when junior model is stuck on a compiler error or test failure.',
           inputSchema: {
@@ -184,12 +194,16 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
                 type: 'string',
                 description: 'What the junior agent tried and why it failed',
               },
+              repo_path: {
+                type: 'string',
+                description: 'Absolute path to repository root for tracking and context',
+              },
             },
             required: ['problem_description', 'error_or_log'],
           },
         },
         {
-          name: 'overwatch_verify',
+          name: TOOL_VERIFY,
           description:
             'MANDATORY completion gate: Audits total git diff against base ref and verifies test suite results before declaring task done.',
           inputSchema: {
@@ -216,7 +230,7 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
           },
         },
         {
-          name: 'overwatch_status',
+          name: TOOL_STATUS,
           description:
             'Inspects configured junior and mentor models, tier validation result, provider health and latency ping, and session call budget.',
           inputSchema: {
@@ -263,9 +277,12 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
     };
 
     try {
-      if (name === 'overwatch_plan_check') {
+      if (name === TOOL_PLAN_CHECK) {
         const input = OverwatchPlanCheckInputSchema.parse(args);
-        const timeoutMs = config.toolTimeouts.overwatch_plan_check || 180000;
+        const timeoutMs =
+          config.toolTimeouts[TOOL_PLAN_CHECK] ||
+          DEFAULT_TOOL_TIMEOUTS[TOOL_PLAN_CHECK] ||
+          180000;
         const { feedback, markdown } = await executePlanCheck(
           input,
           router,
@@ -281,9 +298,12 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
         };
       }
 
-      if (name === 'overwatch_checkpoint') {
+      if (name === TOOL_CHECKPOINT) {
         const input = OverwatchCheckpointInputSchema.parse(args);
-        const timeoutMs = config.toolTimeouts.overwatch_checkpoint || 90000;
+        const timeoutMs =
+          config.toolTimeouts[TOOL_CHECKPOINT] ||
+          DEFAULT_TOOL_TIMEOUTS[TOOL_CHECKPOINT] ||
+          90000;
         const { feedback, markdown } = await executeCheckpoint(
           input,
           router,
@@ -299,9 +319,12 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
         };
       }
 
-      if (name === 'overwatch_review') {
+      if (name === TOOL_REVIEW) {
         const input = OverwatchReviewInputSchema.parse(args);
-        const timeoutMs = config.toolTimeouts.overwatch_review || 120000;
+        const timeoutMs =
+          config.toolTimeouts[TOOL_REVIEW] ||
+          DEFAULT_TOOL_TIMEOUTS[TOOL_REVIEW] ||
+          120000;
         const { feedback, markdown } = await executeReview(
           input,
           router,
@@ -318,13 +341,17 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
         };
       }
 
-      if (name === 'overwatch_quick_hint') {
+      if (name === TOOL_QUICK_HINT) {
         const input = OverwatchQuickHintInputSchema.parse(args);
-        const timeoutMs = config.toolTimeouts.overwatch_quick_hint || 45000;
+        const timeoutMs =
+          config.toolTimeouts[TOOL_QUICK_HINT] ||
+          DEFAULT_TOOL_TIMEOUTS[TOOL_QUICK_HINT] ||
+          45000;
+        const repoPath = input.repo_path || process.cwd();
         const { feedback, markdown } = await executeQuickHint(
           input,
           router,
-          undefined,
+          repoPath,
           config.maxCallsPerSession,
           onProgress,
           timeoutMs
@@ -337,9 +364,12 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
         };
       }
 
-      if (name === 'overwatch_verify') {
+      if (name === TOOL_VERIFY) {
         const input = OverwatchVerifyInputSchema.parse(args);
-        const timeoutMs = config.toolTimeouts.overwatch_verify || 180000;
+        const timeoutMs =
+          config.toolTimeouts[TOOL_VERIFY] ||
+          DEFAULT_TOOL_TIMEOUTS[TOOL_VERIFY] ||
+          180000;
         const { feedback, markdown } = await executeVerify(
           input,
           router,
@@ -355,12 +385,13 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
         };
       }
 
-      if (name === 'overwatch_status') {
+      if (name === TOOL_STATUS) {
         const input = OverwatchStatusInputSchema.parse(args || {});
+        const repoPath = input.repo_path || process.cwd();
         const { status, markdown } = await executeStatus(
           config,
           router,
-          input.repo_path
+          repoPath
         );
         return {
           content: [
@@ -372,7 +403,7 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
 
       throw new Error(`Unknown tool: ${name}`);
     } catch (err: any) {
-      console.error(`[overwatch] Error executing tool '${name}':`, err);
+      console.error(`${LOG_PREFIX} Error executing tool '${name}':`, err);
       return {
         isError: true,
         content: [

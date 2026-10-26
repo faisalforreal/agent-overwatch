@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ModelTier, ModelsData, ModelEntry } from './types.js';
+import { ModelTier, ModelsData, ModelEntry, ModelDefaults } from './types.js';
 
 const TIER_RANKS: Record<ModelTier, number> = {
   small: 1,
@@ -48,21 +48,95 @@ export function loadModelsData(customPath?: string): ModelsData {
 
   // Fallback defaults
   const fallback: ModelsData = {
-    version: '1.2.0-fallback',
+    version: '1.3.0-fallback',
+    defaults: {
+      junior: 'gemini-2.0-flash',
+      mentor: 'claude-3-opus-20240229',
+      providerDefaults: {
+        anthropic: 'claude-3-opus-20240229',
+        gemini: 'gemini-2.0-pro-exp-02-05',
+        openai: 'o3-mini',
+        openrouter: 'anthropic/claude-3-7-sonnet',
+      },
+    },
     models: [
-      { pattern: '.*fable.*', tier: 'frontier', ordinal: 3, reasoning: true, description: 'Fable series' },
-      { pattern: '.*opus.*', tier: 'frontier', ordinal: 2, reasoning: true, description: 'Opus series' },
-      { pattern: '.*o3.*', tier: 'frontier', ordinal: 2, reasoning: true, description: 'o3 series' },
-      { pattern: '.*o1.*', tier: 'frontier', ordinal: 1, reasoning: true, description: 'o1 series' },
-      { pattern: '.*sonnet.*', tier: 'strong', ordinal: 2, reasoning: false, description: 'Sonnet series' },
-      { pattern: '.*deepseek.*', tier: 'strong', ordinal: 2, reasoning: true, description: 'DeepSeek series' },
-      { pattern: '.*gpt-4o$', tier: 'strong', ordinal: 2, reasoning: false, description: 'GPT-4o' },
-      { pattern: '.*flash.*', tier: 'medium', ordinal: 2, reasoning: false, description: 'Flash series' },
-      { pattern: '.*haiku.*', tier: 'medium', ordinal: 2, reasoning: false, description: 'Haiku series' },
-      { pattern: '.*mini.*', tier: 'medium', ordinal: 1, reasoning: false, description: 'Mini series' },
+      { pattern: '.*fable.*', tier: 'frontier', ordinal: 3, reasoning: true, description: 'Fable series', inputCostPerMillion: 15.0, outputCostPerMillion: 75.0 },
+      { pattern: '.*opus.*', tier: 'frontier', ordinal: 2, reasoning: true, description: 'Opus series', inputCostPerMillion: 15.0, outputCostPerMillion: 75.0 },
+      { pattern: '.*o3.*', tier: 'frontier', ordinal: 2, reasoning: true, description: 'o3 series', inputCostPerMillion: 1.1, outputCostPerMillion: 4.4 },
+      { pattern: '.*o1.*', tier: 'frontier', ordinal: 1, reasoning: true, description: 'o1 series', inputCostPerMillion: 15.0, outputCostPerMillion: 60.0 },
+      { pattern: '.*sonnet.*', tier: 'strong', ordinal: 2, reasoning: false, description: 'Sonnet series', inputCostPerMillion: 3.0, outputCostPerMillion: 15.0 },
+      { pattern: '.*deepseek.*', tier: 'strong', ordinal: 2, reasoning: true, description: 'DeepSeek series', inputCostPerMillion: 0.55, outputCostPerMillion: 2.19 },
+      { pattern: '.*gpt-4o$', tier: 'strong', ordinal: 2, reasoning: false, description: 'GPT-4o', inputCostPerMillion: 2.5, outputCostPerMillion: 10.0 },
+      { pattern: '.*flash.*', tier: 'medium', ordinal: 2, reasoning: false, description: 'Flash series', inputCostPerMillion: 0.1, outputCostPerMillion: 0.4 },
+      { pattern: '.*haiku.*', tier: 'medium', ordinal: 2, reasoning: false, description: 'Haiku series', inputCostPerMillion: 0.8, outputCostPerMillion: 4.0 },
+      { pattern: '.*mini.*', tier: 'medium', ordinal: 1, reasoning: false, description: 'Mini series', inputCostPerMillion: 0.15, outputCostPerMillion: 0.6 },
     ],
   };
   return fallback;
+}
+
+export function getModelDefaults(customPath?: string): ModelDefaults {
+  const data = loadModelsData(customPath);
+  return (
+    data.defaults || {
+      junior: 'gemini-2.0-flash',
+      mentor: 'claude-3-opus-20240229',
+      providerDefaults: {
+        anthropic: 'claude-3-opus-20240229',
+        gemini: 'gemini-2.0-pro-exp-02-05',
+        openai: 'o3-mini',
+        openrouter: 'anthropic/claude-3-7-sonnet',
+      },
+    }
+  );
+}
+
+export function estimateModelCost(
+  modelName: string,
+  promptTokens: number,
+  completionTokens: number,
+  customPath?: string
+): number {
+  if (!modelName) return 0;
+  const cleanName = modelName.trim().toLowerCase();
+  const data = loadModelsData(customPath);
+
+  let inputCost = 3.0; // default fallback ($/M)
+  let outputCost = 15.0;
+
+  for (const entry of data.models) {
+    try {
+      const reg = new RegExp(entry.pattern, 'i');
+      if (reg.test(cleanName)) {
+        if (entry.inputCostPerMillion !== undefined && entry.outputCostPerMillion !== undefined) {
+          inputCost = entry.inputCostPerMillion;
+          outputCost = entry.outputCostPerMillion;
+          break;
+        }
+        switch (entry.tier) {
+          case 'frontier':
+            inputCost = 15.0;
+            outputCost = 75.0;
+            break;
+          case 'strong':
+            inputCost = 3.0;
+            outputCost = 15.0;
+            break;
+          case 'medium':
+            inputCost = 0.5;
+            outputCost = 1.5;
+            break;
+          case 'small':
+            inputCost = 0.1;
+            outputCost = 0.4;
+            break;
+        }
+        break;
+      }
+    } catch {}
+  }
+
+  return (promptTokens / 1_000_000) * inputCost + (completionTokens / 1_000_000) * outputCost;
 }
 
 export interface ModelMatchResult {

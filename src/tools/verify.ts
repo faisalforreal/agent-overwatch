@@ -7,6 +7,7 @@ import { formatFeedbackAsMarkdown } from '../prompts/parser.js';
 import { gatherGitContext } from '../context/git.js';
 import { readRepoNotes, appendRepoNotes } from '../context/notes.js';
 import { checkBudget, recordCallUsage } from '../budget/tracker.js';
+import { TOOL_VERIFY } from '../constants.js';
 
 export async function executeVerify(
   input: OverwatchVerifyInput,
@@ -30,9 +31,11 @@ export async function executeVerify(
     return { feedback: budgetFb, markdown: formatFeedbackAsMarkdown(budgetFb) };
   }
 
+  const repoPath = input.repo_path || process.cwd();
+
   if (onProgress) onProgress(10, 100, 'Gathering git diff and test output...');
-  const gitCtx = gatherGitContext(input.repo_path, input.base_ref);
-  const notes = readRepoNotes(input.repo_path);
+  const gitCtx = gatherGitContext(repoPath, input.base_ref);
+  const notes = readRepoNotes(repoPath);
 
   const prompt = buildVerifyPrompt(input, {
     gitDiff: gitCtx.gitDiff,
@@ -51,10 +54,10 @@ export async function executeVerify(
   });
 
   if (feedback.notes_to_save && feedback.notes_to_save.length > 0) {
-    appendRepoNotes(input.repo_path, feedback.notes_to_save);
+    appendRepoNotes(repoPath, feedback.notes_to_save);
   }
 
-  recordCallUsage(input.repo_path, 'overwatch_verify', 'mentor', feedback.usage);
+  recordCallUsage(repoPath, TOOL_VERIFY, 'mentor', feedback.usage);
 
   return {
     feedback,

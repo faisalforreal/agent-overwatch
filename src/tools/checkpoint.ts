@@ -7,6 +7,7 @@ import { formatFeedbackAsMarkdown } from '../prompts/parser.js';
 import { gatherGitContext } from '../context/git.js';
 import { readRepoNotes, appendRepoNotes } from '../context/notes.js';
 import { checkBudget, recordCallUsage } from '../budget/tracker.js';
+import { TOOL_CHECKPOINT } from '../constants.js';
 
 export async function executeCheckpoint(
   input: OverwatchCheckpointInput,
@@ -30,16 +31,17 @@ export async function executeCheckpoint(
     return { feedback: budgetFb, markdown: formatFeedbackAsMarkdown(budgetFb) };
   }
 
+  const repoPath = input.repo_path || process.cwd();
   let gitDiff = '';
   let gitStatus = '';
   let notes = '';
 
-  if (input.repo_path) {
+  if (repoPath) {
     if (onProgress) onProgress(10, 100, 'Gathering git diff and status...');
-    const gitCtx = gatherGitContext(input.repo_path);
+    const gitCtx = gatherGitContext(repoPath);
     gitDiff = gitCtx.gitDiff || '';
     gitStatus = gitCtx.gitStatus || '';
-    notes = readRepoNotes(input.repo_path);
+    notes = readRepoNotes(repoPath);
   }
 
   const prompt = buildCheckpointPrompt(input, {
@@ -58,11 +60,11 @@ export async function executeCheckpoint(
     timeoutMs,
   });
 
-  if (input.repo_path && feedback.notes_to_save && feedback.notes_to_save.length > 0) {
-    appendRepoNotes(input.repo_path, feedback.notes_to_save);
+  if (repoPath && feedback.notes_to_save && feedback.notes_to_save.length > 0) {
+    appendRepoNotes(repoPath, feedback.notes_to_save);
   }
 
-  recordCallUsage(input.repo_path, 'overwatch_checkpoint', 'mentor', feedback.usage);
+  recordCallUsage(repoPath, TOOL_CHECKPOINT, 'mentor', feedback.usage);
 
   return {
     feedback,

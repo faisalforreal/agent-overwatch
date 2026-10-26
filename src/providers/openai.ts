@@ -4,16 +4,26 @@ import {
   ProviderRequestOptions,
 } from './base.js';
 import { UsageStats } from '../types.js';
+import { DEFAULT_TIMEOUT_MS } from '../constants.js';
+import { getModelDefaults, estimateModelCost } from '../tiers.js';
 
 export class OpenAIProvider implements MentorProvider {
   public name = 'openai';
-  public defaultModel = 'o3-mini';
+  public defaultModel: string;
   private apiKey: string;
   private baseUrl: string;
 
-  constructor(apiKey: string, baseUrl = 'https://api.openai.com/v1') {
+  constructor(
+    apiKey: string,
+    baseUrl = 'https://api.openai.com/v1',
+    defaultModel?: string
+  ) {
     this.apiKey = apiKey;
     this.baseUrl = baseUrl.replace(/\/+$/, '');
+    this.defaultModel =
+      defaultModel ||
+      getModelDefaults().providerDefaults?.openai ||
+      getModelDefaults().mentor;
   }
 
   async healthCheck(model?: string): Promise<ProviderHealth> {
@@ -125,12 +135,8 @@ export class OpenAIProvider implements MentorProvider {
       const completionTokens = data.usage?.completion_tokens || 0;
       const totalTokens = data.usage?.total_tokens || promptTokens + completionTokens;
 
-      // Approximate cost for o3-mini ($1.10/M in, $4.40/M out) or o1 ($15/M in, $60/M out)
-      const costPerMillionIn = isReasoningModel ? 5.0 : 2.5;
-      const costPerMillionOut = isReasoningModel ? 20.0 : 10.0;
-      const cost =
-        (promptTokens / 1_000_000) * costPerMillionIn +
-        (completionTokens / 1_000_000) * costPerMillionOut;
+      // Dynamic cost estimation based on model seed data
+      const cost = estimateModelCost(targetModel, promptTokens, completionTokens);
 
       return {
         rawText,
@@ -144,7 +150,7 @@ export class OpenAIProvider implements MentorProvider {
     } catch (err: any) {
       if (err.name === 'AbortError') {
         throw new Error(
-          `Request to OpenAI timed out after ${options.timeoutMs || 90000}ms.`
+          `Request to OpenAI timed out after ${options.timeoutMs || DEFAULT_TIMEOUT_MS}ms.`
         );
       }
       throw err;
