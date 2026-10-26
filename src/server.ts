@@ -8,6 +8,7 @@ import { APP_NAME } from './constants.js';
 import { resolveConfig, OverwatchConfig } from './config.js';
 import { ProviderRouter } from './providers/router.js';
 import { MockProvider } from './providers/mock.js';
+import { ProgressCallback } from './providers/base.js';
 import {
   OverwatchPlanCheckInputSchema,
   OverwatchCheckpointInputSchema,
@@ -232,9 +233,34 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
     };
   });
 
-  // Call tool handler
+  // Call tool handler with progress keep-alive & structured timeout handling
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args } = request.params;
+    const { name, arguments: args, _meta } = request.params;
+    const progressToken = _meta?.progressToken;
+
+    // Build Progress & Keep-Alive Dispatcher
+    const onProgress: ProgressCallback = (progress, total, message) => {
+      // 1. Emit official MCP progress notification if client sent progressToken
+      if (progressToken !== undefined) {
+        server.notification({
+          method: 'notifications/progress',
+          params: {
+            progressToken,
+            progress,
+            total: total || 100,
+            message,
+          },
+        }).catch(() => {});
+      }
+
+      // 2. Emit MCP logging keep-alive so connection remains active
+      if (message) {
+        server.sendLoggingMessage({
+          level: 'info',
+          data: `[${APP_NAME}] ${message}`,
+        }).catch(() => {});
+      }
+    };
 
     try {
       if (name === 'overwatch_plan_check') {
@@ -242,7 +268,8 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
         const { feedback, markdown } = await executePlanCheck(
           input,
           router,
-          config.maxCallsPerSession
+          config.maxCallsPerSession,
+          onProgress
         );
         return {
           content: [
@@ -257,7 +284,8 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
         const { feedback, markdown } = await executeCheckpoint(
           input,
           router,
-          config.maxCallsPerSession
+          config.maxCallsPerSession,
+          onProgress
         );
         return {
           content: [
@@ -273,7 +301,8 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
           input,
           router,
           config.juniorModel,
-          config.maxCallsPerSession
+          config.maxCallsPerSession,
+          onProgress
         );
         return {
           content: [
@@ -289,7 +318,8 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
           input,
           router,
           undefined,
-          config.maxCallsPerSession
+          config.maxCallsPerSession,
+          onProgress
         );
         return {
           content: [
@@ -304,7 +334,8 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
         const { feedback, markdown } = await executeVerify(
           input,
           router,
-          config.maxCallsPerSession
+          config.maxCallsPerSession,
+          onProgress
         );
         return {
           content: [

@@ -1,5 +1,6 @@
 import { OverwatchReviewInput, OverwatchFeedback } from '../types.js';
 import { ProviderRouter } from '../providers/router.js';
+import { ProgressCallback } from '../providers/base.js';
 import { OVERWATCH_SYSTEM_PROMPT } from '../prompts/system.js';
 import { buildReviewPrompt } from '../prompts/templates.js';
 import { formatFeedbackAsMarkdown } from '../prompts/parser.js';
@@ -12,9 +13,9 @@ export async function executeReview(
   input: OverwatchReviewInput,
   router: ProviderRouter,
   juniorModel = 'gemini-3.8-flash',
-  maxBudgetCalls?: number
+  maxBudgetCalls?: number,
+  onProgress?: ProgressCallback
 ): Promise<{ feedback: OverwatchFeedback; markdown: string }> {
-  // Validate per-call mentor model tier if overridden
   if (input.mentor_model) {
     const tierCheck = validateMentorSuperiority(input.mentor_model, juniorModel);
     if (!tierCheck.valid) {
@@ -41,6 +42,7 @@ export async function executeReview(
   let notes = '';
 
   if (input.repo_path) {
+    if (onProgress) onProgress(10, 100, 'Gathering git diff across repository...');
     const gitCtx = gatherGitContext(input.repo_path);
     if (gitCtx.gitDiff) {
       gitDiff = gitCtx.gitDiff;
@@ -54,11 +56,14 @@ export async function executeReview(
     notes,
   });
 
+  if (onProgress) onProgress(25, 100, 'Submitting diff to mentor model for audit...');
+
   const feedback = await router.executeReviewWithFallbacks({
     systemPrompt: OVERWATCH_SYSTEM_PROMPT,
     userPrompt: prompt,
     notesContext: notes,
     model: input.mentor_model,
+    onProgress,
   });
 
   if (input.repo_path && feedback.notes_to_save && feedback.notes_to_save.length > 0) {

@@ -45,7 +45,7 @@ describe('Tier Validation Engine', () => {
     // Medium mentor vs Medium junior -> INVALID
     const res3 = validateMentorSuperiority('gemini-2.0-flash', 'gemini-3.8-flash');
     expect(res3.valid).toBe(false);
-    expect(res3.warning).toContain('is NOT strictly stronger');
+    expect(res3.warning).toContain('is NOT stronger');
 
     // Small mentor vs Medium junior -> INVALID
     const res4 = validateMentorSuperiority('gpt-3.5-turbo', 'gemini-3.8-flash');

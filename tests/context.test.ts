@@ -50,15 +50,17 @@ describe('Context, Notes, and Budget Guard', () => {
     expect(notes).toContain('Rejected MongoDB');
   });
 
-  it('compacts oversized notes while preserving header and recent items', () => {
-    let huge = '# Intro\n';
-    for (let i = 0; i < 500; i++) {
-      huge += `- Decision item number ${i}: detailed rationale and architectural constraints here.\n`;
+  it('compacts oversized notes into categorized architectural synthesis', () => {
+    let huge = '# Raw Notes\n';
+    for (let i = 0; i < 200; i++) {
+      huge += `- Decision: Rationale number ${i}\n`;
+      huge += `- Constraint: Constraint number ${i}\n`;
+      huge += `- Rejected: Alternative number ${i}\n`;
     }
 
     const compacted = compactNotesContent(huge, 1024); // Cap at 1KB for test
-    expect(compacted).toContain('# Intro');
-    expect(compacted).toContain('Earlier decisions compacted');
+    expect(compacted).toContain('Core Architectural Decisions');
+    expect(compacted).toContain('Active Constraints & Requirements');
     expect(compacted.length).toBeLessThan(huge.length);
   });
 

@@ -1,5 +1,6 @@
 import { OverwatchVerifyInput, OverwatchFeedback } from '../types.js';
 import { ProviderRouter } from '../providers/router.js';
+import { ProgressCallback } from '../providers/base.js';
 import { OVERWATCH_SYSTEM_PROMPT } from '../prompts/system.js';
 import { buildVerifyPrompt } from '../prompts/templates.js';
 import { formatFeedbackAsMarkdown } from '../prompts/parser.js';
@@ -10,7 +11,8 @@ import { checkBudget, recordCallUsage } from '../budget/tracker.js';
 export async function executeVerify(
   input: OverwatchVerifyInput,
   router: ProviderRouter,
-  maxBudgetCalls?: number
+  maxBudgetCalls?: number,
+  onProgress?: ProgressCallback
 ): Promise<{ feedback: OverwatchFeedback; markdown: string }> {
   const budget = checkBudget(maxBudgetCalls);
   if (!budget.allowed) {
@@ -27,6 +29,7 @@ export async function executeVerify(
     return { feedback: budgetFb, markdown: formatFeedbackAsMarkdown(budgetFb) };
   }
 
+  if (onProgress) onProgress(10, 100, 'Gathering git diff and test output...');
   const gitCtx = gatherGitContext(input.repo_path, input.base_ref);
   const notes = readRepoNotes(input.repo_path);
 
@@ -36,10 +39,13 @@ export async function executeVerify(
     notes,
   });
 
+  if (onProgress) onProgress(25, 100, 'Submitting diff and test results to mentor for verification...');
+
   const feedback = await router.executeReviewWithFallbacks({
     systemPrompt: OVERWATCH_SYSTEM_PROMPT,
     userPrompt: prompt,
     notesContext: notes,
+    onProgress,
   });
 
   if (feedback.notes_to_save && feedback.notes_to_save.length > 0) {

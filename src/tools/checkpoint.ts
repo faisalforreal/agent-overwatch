@@ -1,5 +1,6 @@
 import { OverwatchCheckpointInput, OverwatchFeedback } from '../types.js';
 import { ProviderRouter } from '../providers/router.js';
+import { ProgressCallback } from '../providers/base.js';
 import { OVERWATCH_SYSTEM_PROMPT } from '../prompts/system.js';
 import { buildCheckpointPrompt } from '../prompts/templates.js';
 import { formatFeedbackAsMarkdown } from '../prompts/parser.js';
@@ -10,7 +11,8 @@ import { checkBudget, recordCallUsage } from '../budget/tracker.js';
 export async function executeCheckpoint(
   input: OverwatchCheckpointInput,
   router: ProviderRouter,
-  maxBudgetCalls?: number
+  maxBudgetCalls?: number,
+  onProgress?: ProgressCallback
 ): Promise<{ feedback: OverwatchFeedback; markdown: string }> {
   const budget = checkBudget(maxBudgetCalls);
   if (!budget.allowed) {
@@ -32,6 +34,7 @@ export async function executeCheckpoint(
   let notes = '';
 
   if (input.repo_path) {
+    if (onProgress) onProgress(10, 100, 'Gathering git diff and status...');
     const gitCtx = gatherGitContext(input.repo_path);
     gitDiff = gitCtx.gitDiff || '';
     gitStatus = gitCtx.gitStatus || '';
@@ -44,10 +47,13 @@ export async function executeCheckpoint(
     notes,
   });
 
+  if (onProgress) onProgress(20, 100, 'Connecting to mentor for milestone steering...');
+
   const feedback = await router.executeReviewWithFallbacks({
     systemPrompt: OVERWATCH_SYSTEM_PROMPT,
     userPrompt: prompt,
     notesContext: notes,
+    onProgress,
   });
 
   if (input.repo_path && feedback.notes_to_save && feedback.notes_to_save.length > 0) {

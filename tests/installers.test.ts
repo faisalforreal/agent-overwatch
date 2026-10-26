@@ -103,12 +103,17 @@ describe('Client Installers Suite', () => {
     expect(fs.existsSync(cursorPaths.mcpConfigPath!)).toBe(true);
   });
 
-  it('marks Codex as manual with exact CLI instructions', () => {
+  it('configures Codex in ~/.codex/config.toml with mcp_servers entry', () => {
     const res = installForClient('codex', {
       customHome: tmpHome,
       workspaceRoot: tmpWs,
     });
-    expect(res.status).toBe('manual');
-    expect(res.message).toContain('codex mcp add');
+    expect(res.status).toBe('installed');
+    expect(res.message).toContain('~/.codex/config.toml');
+
+    const paths = getClientPaths('codex', tmpHome, tmpWs);
+    expect(fs.existsSync(paths.mcpConfigPath!)).toBe(true);
+    const toml = fs.readFileSync(paths.mcpConfigPath!, 'utf-8');
+    expect(toml).toContain('[mcp_servers.overwatch]');
   });
 });

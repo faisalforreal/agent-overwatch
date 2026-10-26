@@ -1,5 +1,6 @@
 import { OverwatchPlanCheckInput, OverwatchFeedback } from '../types.js';
 import { ProviderRouter } from '../providers/router.js';
+import { ProgressCallback } from '../providers/base.js';
 import { OVERWATCH_SYSTEM_PROMPT } from '../prompts/system.js';
 import { buildPlanCheckPrompt } from '../prompts/templates.js';
 import { formatFeedbackAsMarkdown } from '../prompts/parser.js';
@@ -11,7 +12,8 @@ import { checkBudget, recordCallUsage } from '../budget/tracker.js';
 export async function executePlanCheck(
   input: OverwatchPlanCheckInput,
   router: ProviderRouter,
-  maxBudgetCalls?: number
+  maxBudgetCalls?: number,
+  onProgress?: ProgressCallback
 ): Promise<{ feedback: OverwatchFeedback; markdown: string }> {
   const budget = checkBudget(maxBudgetCalls);
   if (!budget.allowed) {
@@ -33,6 +35,7 @@ export async function executePlanCheck(
   let notes = '';
 
   if (input.repo_path) {
+    if (onProgress) onProgress(10, 100, 'Gathering repository status and context files...');
     const gitCtx = gatherGitContext(input.repo_path);
     gitStatus = gitCtx.gitStatus || '';
     const filesCtx = gatherRelevantFiles(input.repo_path, input.relevant_files);
@@ -46,10 +49,13 @@ export async function executePlanCheck(
     notes,
   });
 
+  if (onProgress) onProgress(20, 100, 'Submitting plan to mentor model for architectural check...');
+
   const feedback = await router.executeReviewWithFallbacks({
     systemPrompt: OVERWATCH_SYSTEM_PROMPT,
     userPrompt: prompt,
     notesContext: notes,
+    onProgress,
   });
 
   if (input.repo_path && feedback.notes_to_save && feedback.notes_to_save.length > 0) {
