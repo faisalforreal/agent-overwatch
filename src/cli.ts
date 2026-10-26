@@ -1,0 +1,236 @@
+import { Command } from 'commander';
+import fs from 'node:fs';
+import path from 'node:path';
+import readline from 'node:readline';
+import { APP_NAME, BIN_NAME, CONFIG_DIR_NAME } from './constants.js';
+import {
+  resolveConfig,
+  saveConfigFile,
+  maskApiKey,
+  getGlobalConfigPath,
+  OverwatchConfig,
+} from './config.js';
+import { runServer } from './server.js';
+import { ProviderRouter } from './providers/router.js';
+import { validateMentorSuperiority, getModelTier } from './tiers.js';
+import { installForClient, getClientPaths } from './clients/installer.js';
+import { SupportedClient } from './clients/types.js';
+import { loadStoredUsage } from './budget/tracker.js';
+
+export function createCli(): Command {
+  const program = new Command();
+
+  program
+    .name(BIN_NAME)
+    .description(`Overwatch: Steer junior models with senior mentor models via MCP.`)
+    .version('1.0.0');
+
+  // Command: serve
+  program
+    .command('serve')
+    .description('Run the Stdio MCP server')
+    .action(async () => {
+      await runServer();
+    });
+
+  // Command: doctor
+  program
+    .command('doctor')
+    .description('Check environment, provider connectivity, model tiers, and client configs')
+    .action(async () => {
+      console.log(`\n🏥 --- ${APP_NAME.toUpperCase()} DOCTOR --- 🏥\n`);
+
+      // 1. Node version & executable
+      console.log(`Node Environment:`);
+      console.log(`  - Version: ${process.version}`);
+      console.log(`  - Executable: ${process.execPath}`);
+      console.log(`  - Platform: ${process.platform} (${process.arch})`);
+
+      // 2. Config & Keys
+      const config = resolveConfig();
+      console.log(`\nConfiguration (${getGlobalConfigPath()}):`);
+      console.log(`  - OpenRouter Key: ${maskApiKey(config.openrouterApiKey)}`);
+      console.log(`  - Anthropic Key:  ${maskApiKey(config.anthropicApiKey)}`);
+      console.log(`  - Gemini Key:     ${maskApiKey(config.geminiApiKey)}`);
+      console.log(`  - OpenAI Key:     ${maskApiKey(config.openaiApiKey)}`);
+      if (config.openaiBaseUrl) {
+        console.log(`  - OpenAI Base URL: ${config.openaiBaseUrl}`);
+      }
+
+      // 3. Models & Tiers
+      console.log(`\nModel Tier Validation:`);
+      console.log(`  - Junior Model: ${config.juniorModel}`);
+      console.log(`  - Mentor Model: ${config.mentorModel}`);
+      const tierRes = validateMentorSuperiority(config.mentorModel, config.juniorModel);
+      console.log(`  - Junior Tier:  ${tierRes.juniorTier}`);
+      console.log(`  - Mentor Tier:  ${tierRes.mentorTier}`);
+      if (tierRes.valid) {
+        console.log(`  - Status:       ✅ VALID (Mentor is strictly stronger)`);
+      } else {
+        console.log(`  - Status:       🚨 INVALID: ${tierRes.warning}`);
+      }
+
+      // 4. Provider Connectivity
+      console.log(`\nLive Mentor Connectivity:`);
+      const router = new ProviderRouter(config);
+      try {
+        const health = await router.healthCheck();
+        if (health.ok) {
+          console.log(`  - Status:  🟢 CONNECTED (${health.provider}, ping: ${health.latencyMs}ms)`);
+        } else {
+          console.log(`  - Status:  🔴 FAILED (${health.provider}: ${health.error})`);
+        }
+      } catch (err: any) {
+        console.log(`  - Status:  🔴 ERROR: ${err?.message || err}`);
+      }
+
+      // 5. Client Registrations
+      console.log(`\nClient MCP Registrations:`);
+      const clients: SupportedClient[] = ['antigravity', 'claude_code', 'cursor', 'windsurf', 'vscode'];
+      for (const cl of clients) {
+        const paths = getClientPaths(cl);
+        let registered = false;
+        if (paths.mcpConfigPath && fs.existsSync(paths.mcpConfigPath)) {
+          try {
+            const raw = fs.readFileSync(paths.mcpConfigPath, 'utf-8');
+            const parsed = JSON.parse(raw);
+            if (parsed.mcpServers?.[APP_NAME]) {
+              registered = true;
+            }
+          } catch {}
+        }
+        console.log(
+          `  - ${cl.padEnd(12)}: ${registered ? '✅ Configured' : '⚪ Not registered'} (${paths.mcpConfigPath || 'n/a'})`
+        );
+      }
+
+      console.log(`\nDoctor check completed.\n`);
+    });
+
+  // Command: setup
+  program
+    .command('setup')
+    .description('Register the MCP server, skill, and rules in an AI agent client')
+    .requiredOption(
+      '--client <client>',
+      'Target client (antigravity, claude_code, cursor, windsurf, vscode, codex, all)'
+    )
+    .option('--dry-run', 'Preview changes without modifying any files')
+    .option('--uninstall', 'Remove overwatch from the specified client')
+    .action((opts) => {
+      const client = opts.client as SupportedClient;
+      const clientsToRun: SupportedClient[] =
+        client === 'all'
+          ? ['antigravity', 'claude_code', 'cursor', 'windsurf', 'vscode', 'codex']
+          : [client];
+
+      console.log(`\n⚙️  Running ${APP_NAME} setup for: ${clientsToRun.join(', ')}`);
+      if (opts.dryRun) console.log(`   (Mode: DRY-RUN - no files will be written)\n`);
+
+      for (const c of clientsToRun) {
+        const res = installForClient(c, {
+          dryRun: opts.dryRun,
+          uninstall: opts.uninstall,
+        });
+
+        console.log(`[${c}] ${res.message}`);
+        for (const p of res.pathsModified) {
+          console.log(`  - Modified: ${p}`);
+        }
+        for (const b of res.backupsCreated) {
+          console.log(`  - Backup:   ${b}`);
+        }
+      }
+      console.log(`\nSetup completed.\n`);
+    });
+
+  // Command: configure
+  program
+    .command('configure')
+    .description('Interactive configuration wizard for keys and models')
+    .action(async () => {
+      const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+      });
+      const ask = (q: string): Promise<string> =>
+        new Promise((resolve) => rl.question(q, resolve));
+
+      const current = resolveConfig();
+      console.log(`\n🛠️  --- ${APP_NAME.toUpperCase()} CONFIGURATION WIZARD --- 🛠️\n`);
+
+      const openrouter = await ask(
+        `OpenRouter API Key [${maskApiKey(current.openrouterApiKey)}]: `
+      );
+      const anthropic = await ask(
+        `Anthropic API Key [${maskApiKey(current.anthropicApiKey)}]: `
+      );
+      const gemini = await ask(`Gemini API Key [${maskApiKey(current.geminiApiKey)}]: `);
+      const openai = await ask(`OpenAI API Key [${maskApiKey(current.openaiApiKey)}]: `);
+
+      const junior = await ask(
+        `Junior model (execution worker) [${current.juniorModel}]: `
+      );
+      const mentor = await ask(
+        `Mentor model (senior steering architect) [${current.mentorModel}]: `
+      );
+
+      const updatedJunior = junior.trim() || current.juniorModel;
+      const updatedMentor = mentor.trim() || current.mentorModel;
+
+      // Tier check
+      const tierRes = validateMentorSuperiority(updatedMentor, updatedJunior);
+      if (!tierRes.valid) {
+        console.log(`\n⚠️  WARNING: ${tierRes.warning}`);
+        const confirm = await ask(`Do you wish to keep this configuration anyway? (y/N): `);
+        if (confirm.toLowerCase() !== 'y') {
+          console.log(`Configuration aborted.`);
+          rl.close();
+          return;
+        }
+      }
+
+      const newConfig: Partial<OverwatchConfig> = {
+        juniorModel: updatedJunior,
+        mentorModel: updatedMentor,
+      };
+
+      if (openrouter.trim()) newConfig.openrouterApiKey = openrouter.trim();
+      if (anthropic.trim()) newConfig.anthropicApiKey = anthropic.trim();
+      if (gemini.trim()) newConfig.geminiApiKey = gemini.trim();
+      if (openai.trim()) newConfig.openaiApiKey = openai.trim();
+
+      saveConfigFile(newConfig);
+      console.log(`\n✅ Configuration saved to ${getGlobalConfigPath()}\n`);
+      rl.close();
+    });
+
+  // Command: stats
+  program
+    .command('stats')
+    .description('Display session and lifetime token usage and estimated spend')
+    .option('--repo <path>', 'Repository path to check usage file', process.cwd())
+    .action((opts) => {
+      const usage = loadStoredUsage(opts.repo);
+      console.log(`\n📊 --- ${APP_NAME.toUpperCase()} USAGE STATS --- 📊`);
+      console.log(`Repository: ${opts.repo}`);
+      console.log(`Total Calls:             ${usage.totalCalls}`);
+      console.log(`Total Tokens:            ${usage.totalTokens}`);
+      console.log(`  - Prompt Tokens:       ${usage.totalPromptTokens}`);
+      console.log(`  - Completion Tokens:   ${usage.totalCompletionTokens}`);
+      console.log(`Total Estimated Spend:   \$${usage.totalSpendUsd.toFixed(4)}\n`);
+
+      if (usage.history.length > 0) {
+        console.log(`Recent Activity (Last 5):`);
+        const recent = usage.history.slice(-5);
+        for (const r of recent) {
+          console.log(
+            `  [${r.timestamp.slice(0, 19)}] ${r.tool.padEnd(22)} (${r.model}) : ${r.totalTokens} tokens, \$${r.estimatedCostUsd.toFixed(4)}`
+          );
+        }
+        console.log('');
+      }
+    });
+
+  return program;
+}

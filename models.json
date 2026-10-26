@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "description": "Model tier and capability mapping for overwatch. Contributors can add or update model patterns via PR.",
+  "models": [
+    {
+      "pattern": "^(anthropic/)?claude(-[0-9.]+)?-opus.*",
+      "tier": "frontier",
+      "reasoning": true,
+      "description": "Anthropic Opus tier (Opus 3, Opus 4, Opus 5, Opus 5.5)"
+    },
+    {
+      "pattern": "^(anthropic/)?claude-opus.*",
+      "tier": "frontier",
+      "reasoning": true,
+      "description": "Anthropic Claude Opus series"
+    },
+    {
+      "pattern": "^fable(-[0-9.]+)?.*",
+      "tier": "frontier",
+      "reasoning": true,
+      "description": "Fable 5.1 and next-gen reasoning models"
+    },
+    {
+      "pattern": "^(google/)?gemini-(4-)?argon.*",
+      "tier": "frontier",
+      "reasoning": true,
+      "description": "Gemini 4-Argon frontier model"
+    },
+    {
+      "pattern": "^(google/)?gemini-astra.*",
+      "tier": "frontier",
+      "reasoning": true,
+      "description": "Gemini Astra frontier model"
+    },
+    {
+      "pattern": "^(google/)?gemini-2\\.[0-5]-pro.*",
+      "tier": "frontier",
+      "reasoning": true,
+      "description": "Gemini Pro advanced series"
+    },
+    {
+      "pattern": "^(openai/)?o1(-preview|-mini)?$",
+      "tier": "frontier",
+      "reasoning": true,
+      "description": "OpenAI o1 reasoning model"
+    },
+    {
+      "pattern": "^(openai/)?o3(-mini)?$",
+      "tier": "frontier",
+      "reasoning": true,
+      "description": "OpenAI o3 reasoning model"
+    },
+    {
+      "pattern": "^(openai/)?gpt-(4\\.5|5).*",
+      "tier": "frontier",
+      "reasoning": true,
+      "description": "OpenAI GPT-4.5 / GPT-5 flagship"
+    },
+    {
+      "pattern": "^(anthropic/)?claude-3-7-sonnet.*",
+      "tier": "frontier",
+      "reasoning": true,
+      "description": "Claude 3.7 Sonnet with hybrid reasoning"
+    },
+    {
+      "pattern": "^(anthropic/)?claude-3-5-sonnet.*",
+      "tier": "strong",
+      "reasoning": false,
+      "description": "Claude 3.5 Sonnet coding workhorse"
+    },
+    {
+      "pattern": "^(anthropic/)?claude-3-8-sonnet.*",
+      "tier": "frontier",
+      "reasoning": true,
+      "description": "Claude 3.8 Sonnet"
+    },
+    {
+      "pattern": "^(deepseek/)?deepseek-r1.*",
+      "tier": "strong",
+      "reasoning": true,
+      "description": "DeepSeek R1 reasoning model"
+    },
+    {
+      "pattern": "^(deepseek/)?deepseek-v3.*",
+      "tier": "strong",
+      "reasoning": false,
+      "description": "DeepSeek V3 model"
+    },
+    {
+      "pattern": "^(openai/)?gpt-4o(-202[4-9].*)?$",
+      "tier": "strong",
+      "reasoning": false,
+      "description": "OpenAI GPT-4o flagship"
+    },
+    {
+      "pattern": "^(google/)?gemini-1\\.5-pro.*",
+      "tier": "strong",
+      "reasoning": false,
+      "description": "Gemini 1.5 Pro"
+    },
+    {
+      "pattern": "^(google/)?gemini-3\\.5-pro.*",
+      "tier": "strong",
+      "reasoning": true,
+      "description": "Gemini 3.5 Pro"
+    },
+    {
+      "pattern": "^(google/)?gemini-3\\.8-flash.*",
+      "tier": "medium",
+      "reasoning": false,
+      "description": "Gemini 3.8 Flash high-throughput junior model"
+    },
+    {
+      "pattern": "^(google/)?gemini-2\\.0-flash.*",
+      "tier": "medium",
+      "reasoning": false,
+      "description": "Gemini 2.0 Flash"
+    },
+    {
+      "pattern": "^(google/)?gemini-1\\.5-flash.*",
+      "tier": "medium",
+      "reasoning": false,
+      "description": "Gemini 1.5 Flash"
+    },
+    {
+      "pattern": "^(anthropic/)?claude-3-5-haiku.*",
+      "tier": "medium",
+      "reasoning": false,
+      "description": "Claude 3.5 Haiku"
+    },
+    {
+      "pattern": "^(openai/)?gpt-4o-mini.*",
+      "tier": "medium",
+      "reasoning": false,
+      "description": "OpenAI GPT-4o-mini"
+    },
+    {
+      "pattern": "^(google/)?gemini-.*flash-8b.*",
+      "tier": "small",
+      "reasoning": false,
+      "description": "Gemini Flash 8B"
+    },
+    {
+      "pattern": "^(anthropic/)?claude-3-haiku.*",
+      "tier": "small",
+      "reasoning": false,
+      "description": "Claude 3 Haiku legacy"
+    },
+    {
+      "pattern": "^(openai/)?gpt-3\\.5-turbo.*",
+      "tier": "small",
+      "reasoning": false,
+      "description": "GPT-3.5-Turbo legacy"
+    },
+    {
+      "pattern": "^(meta-llama/)?llama-3\\.[12]-[137]b.*",
+      "tier": "small",
+      "reasoning": false,
+      "description": "Llama 3.1/3.2 small edge models"
+    },
+    {
+      "pattern": "^(qwen/)?qwen-2\\.5-coder-[0-7]b.*",
+      "tier": "small",
+      "reasoning": false,
+      "description": "Qwen 2.5 Coder small models"
+    }
+  ]
+}

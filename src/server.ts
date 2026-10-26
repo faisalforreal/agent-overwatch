@@ -1,0 +1,355 @@
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
+import { APP_NAME } from './constants.js';
+import { resolveConfig, OverwatchConfig } from './config.js';
+import { ProviderRouter } from './providers/router.js';
+import { MockProvider } from './providers/mock.js';
+import {
+  OverwatchPlanCheckInputSchema,
+  OverwatchCheckpointInputSchema,
+  OverwatchReviewInputSchema,
+  OverwatchQuickHintInputSchema,
+  OverwatchVerifyInputSchema,
+  OverwatchStatusInputSchema,
+} from './types.js';
+import {
+  executePlanCheck,
+  executeCheckpoint,
+  executeReview,
+  executeQuickHint,
+  executeVerify,
+  executeStatus,
+} from './tools/index.js';
+
+export interface CreateServerOptions {
+  config?: OverwatchConfig;
+  mockProvider?: MockProvider;
+}
+
+export function createOverwatchServer(options: CreateServerOptions = {}): {
+  server: Server;
+  router: ProviderRouter;
+  config: OverwatchConfig;
+} {
+  const config = options.config || resolveConfig();
+  const router = new ProviderRouter(config, options.mockProvider);
+
+  const server = new Server(
+    {
+      name: APP_NAME,
+      version: '1.0.0',
+    },
+    {
+      capabilities: {
+        tools: {},
+        logging: {},
+      },
+    }
+  );
+
+  // List tools handler
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    return {
+      tools: [
+        {
+          name: 'overwatch_plan_check',
+          description:
+            'MANDATORY pre-implementation gate: Senior architect evaluates proposed plan against user goal, edge cases, and repo architecture before code is written.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              user_goal: {
+                type: 'string',
+                description: 'The primary task or prompt from the user',
+              },
+              proposed_plan: {
+                type: 'string',
+                description: 'The detailed plan drafted by the junior agent',
+              },
+              repo_path: {
+                type: 'string',
+                description: 'Absolute path to repository root for context gathering',
+              },
+              relevant_files: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Relevant relative file paths suggested by junior agent',
+              },
+              architecture_context: {
+                type: 'string',
+                description: 'Notes on framework, dependencies, or system constraints',
+              },
+            },
+            required: ['user_goal', 'proposed_plan'],
+          },
+        },
+        {
+          name: 'overwatch_checkpoint',
+          description:
+            'MANDATORY steering gate: Evaluates progress after every major milestone and after 2 consecutive failures. Inspects git diff and dictates the next 3-5 concrete steps and avoid list.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              user_goal: {
+                type: 'string',
+                description: 'The primary task or prompt from the user',
+              },
+              state: {
+                type: 'object',
+                properties: {
+                  done: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Completed milestones so far',
+                  },
+                  failing: {
+                    type: 'string',
+                    description: 'Current failure or error if any',
+                  },
+                  about_to_do: {
+                    type: 'string',
+                    description: 'The next step the junior agent is about to execute',
+                  },
+                },
+                required: ['done', 'about_to_do'],
+              },
+              repo_path: {
+                type: 'string',
+                description: 'Absolute path to repository root for automatic diff check',
+              },
+              error_log: {
+                type: 'string',
+                description: 'Compiler, test, or runtime error log',
+              },
+            },
+            required: ['user_goal', 'state'],
+          },
+        },
+        {
+          name: 'overwatch_review',
+          description:
+            'Full code review of real git diff or draft code: detects logic defects, race conditions, edge cases, and provides actionable coaching prompts.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              user_goal: {
+                type: 'string',
+                description: 'The primary task or prompt from the user',
+              },
+              repo_path: {
+                type: 'string',
+                description: 'Absolute path to repository root (preferred; server reads real git diff)',
+              },
+              draft_code_or_diff: {
+                type: 'string',
+                description: 'Manual code or diff snippet if repo_path is not available',
+              },
+              file_context: {
+                type: 'string',
+                description: 'Additional context or file snippets',
+              },
+              current_tests_or_errors: {
+                type: 'string',
+                description: 'Test execution outputs or errors',
+              },
+              mentor_model: {
+                type: 'string',
+                description: 'Optional per-call override for mentor model (must pass tier check)',
+              },
+            },
+            required: ['user_goal'],
+          },
+        },
+        {
+          name: 'overwatch_quick_hint',
+          description:
+            'Targeted diagnosis to break out of debug loops when junior model is stuck on a compiler error or test failure.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              problem_description: {
+                type: 'string',
+                description: 'Brief description of where the agent is stuck',
+              },
+              error_or_log: {
+                type: 'string',
+                description: 'The exact error message, stack trace, or compiler error',
+              },
+              attempted_fix: {
+                type: 'string',
+                description: 'What the junior agent tried and why it failed',
+              },
+            },
+            required: ['problem_description', 'error_or_log'],
+          },
+        },
+        {
+          name: 'overwatch_verify',
+          description:
+            'MANDATORY completion gate: Audits total git diff against base ref and verifies test suite results before declaring task done.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              user_goal: {
+                type: 'string',
+                description: 'The primary task or prompt from the user',
+              },
+              repo_path: {
+                type: 'string',
+                description: 'Absolute path to repository root to inspect real git diff',
+              },
+              base_ref: {
+                type: 'string',
+                description: 'Git base reference to diff against (defaults to HEAD~1)',
+              },
+              test_results: {
+                type: 'string',
+                description: 'Console output of test suite execution',
+              },
+            },
+            required: ['user_goal', 'repo_path'],
+          },
+        },
+        {
+          name: 'overwatch_status',
+          description:
+            'Inspects configured junior and mentor models, tier validation result, provider health and latency ping, and session call budget.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              repo_path: {
+                type: 'string',
+                description: 'Repository path to check local notes and session budget',
+              },
+            },
+          },
+        },
+      ],
+    };
+  });
+
+  // Call tool handler
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    const { name, arguments: args } = request.params;
+
+    try {
+      if (name === 'overwatch_plan_check') {
+        const input = OverwatchPlanCheckInputSchema.parse(args);
+        const { feedback, markdown } = await executePlanCheck(
+          input,
+          router,
+          config.maxCallsPerSession
+        );
+        return {
+          content: [
+            { type: 'text', text: markdown },
+            { type: 'text', text: JSON.stringify(feedback) },
+          ],
+        };
+      }
+
+      if (name === 'overwatch_checkpoint') {
+        const input = OverwatchCheckpointInputSchema.parse(args);
+        const { feedback, markdown } = await executeCheckpoint(
+          input,
+          router,
+          config.maxCallsPerSession
+        );
+        return {
+          content: [
+            { type: 'text', text: markdown },
+            { type: 'text', text: JSON.stringify(feedback) },
+          ],
+        };
+      }
+
+      if (name === 'overwatch_review') {
+        const input = OverwatchReviewInputSchema.parse(args);
+        const { feedback, markdown } = await executeReview(
+          input,
+          router,
+          config.juniorModel,
+          config.maxCallsPerSession
+        );
+        return {
+          content: [
+            { type: 'text', text: markdown },
+            { type: 'text', text: JSON.stringify(feedback) },
+          ],
+        };
+      }
+
+      if (name === 'overwatch_quick_hint') {
+        const input = OverwatchQuickHintInputSchema.parse(args);
+        const { feedback, markdown } = await executeQuickHint(
+          input,
+          router,
+          undefined,
+          config.maxCallsPerSession
+        );
+        return {
+          content: [
+            { type: 'text', text: markdown },
+            { type: 'text', text: JSON.stringify(feedback) },
+          ],
+        };
+      }
+
+      if (name === 'overwatch_verify') {
+        const input = OverwatchVerifyInputSchema.parse(args);
+        const { feedback, markdown } = await executeVerify(
+          input,
+          router,
+          config.maxCallsPerSession
+        );
+        return {
+          content: [
+            { type: 'text', text: markdown },
+            { type: 'text', text: JSON.stringify(feedback) },
+          ],
+        };
+      }
+
+      if (name === 'overwatch_status') {
+        const input = OverwatchStatusInputSchema.parse(args || {});
+        const { status, markdown } = await executeStatus(
+          config,
+          router,
+          input.repo_path
+        );
+        return {
+          content: [
+            { type: 'text', text: markdown },
+            { type: 'text', text: JSON.stringify(status) },
+          ],
+        };
+      }
+
+      throw new Error(`Unknown tool: ${name}`);
+    } catch (err: any) {
+      console.error(`[overwatch] Error executing tool '${name}':`, err);
+      return {
+        isError: true,
+        content: [
+          {
+            type: 'text',
+            text: `Tool Execution Error in '${name}': ${err?.message || String(err)}`,
+          },
+        ],
+      };
+    }
+  });
+
+  return { server, router, config };
+}
+
+export async function runServer(): Promise<void> {
+  const { server } = createOverwatchServer();
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  console.error(`[${APP_NAME}] Stdio MCP server connected and listening.`);
+}
