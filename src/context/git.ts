@@ -51,10 +51,13 @@ export function getGitDiff(
     }
 
     let truncated = false;
-    if (Buffer.byteLength(output, 'utf-8') > maxBytes) {
+    const outputBytes = Buffer.byteLength(output, 'utf-8');
+    if (outputBytes > maxBytes) {
       truncated = true;
-      output =
-        output.slice(0, maxBytes) +
+      // Slice by bytes, not char index, to honour the cap precisely with multibyte content
+      const buf = Buffer.from(output, 'utf-8').subarray(0, maxBytes);
+      // Trim any incomplete multibyte sequence at the cut point
+      output = buf.toString('utf-8').replace(/\uFFFD+$/, '') +
         `\n\n[... Git diff truncated at ${Math.round(maxBytes / 1024)} KB cap for model context ...]`;
     }
 

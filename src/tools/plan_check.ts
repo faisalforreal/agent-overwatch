@@ -33,18 +33,12 @@ export async function executePlanCheck(
   }
 
   const repoPath = input.repo_path || process.cwd();
-  let gitStatus = '';
-  let relevantFilesContent = '';
-  let notes = '';
-
-  if (repoPath) {
-    if (onProgress) onProgress(10, 100, 'Gathering repository status and context files...');
-    const gitCtx = gatherGitContext(repoPath);
-    gitStatus = gitCtx.gitStatus || '';
-    const filesCtx = gatherRelevantFiles(repoPath, input.relevant_files);
-    relevantFilesContent = filesCtx.combinedFormatted;
-    notes = readRepoNotes(repoPath);
-  }
+  if (onProgress) onProgress(10, 100, 'Gathering repository status and context files...');
+  const gitCtx = gatherGitContext(repoPath);
+  const gitStatus = gitCtx.gitStatus || '';
+  const filesCtx = gatherRelevantFiles(repoPath, input.relevant_files);
+  const relevantFilesContent = filesCtx.combinedFormatted;
+  const notes = readRepoNotes(repoPath);
 
   const prompt = buildPlanCheckPrompt(input, {
     gitStatus,

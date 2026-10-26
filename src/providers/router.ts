@@ -8,6 +8,7 @@ import { MockProvider } from './mock.js';
 import { parseOverwatchFeedback } from '../prompts/parser.js';
 import { OverwatchFeedback } from '../types.js';
 import { LOG_PREFIX } from '../constants.js';
+import { getModelDefaults } from '../tiers.js';
 
 export interface RouteResolution {
   provider: MentorProvider;
@@ -93,17 +94,18 @@ export class ProviderRouter {
       };
     }
 
-    // 5. Fallback to any available direct provider
+    // 5. Fallback to any available direct provider using seed defaults
+    const providerDefaults = getModelDefaults().providerDefaults || {};
     if (this.config.anthropicApiKey) {
       return {
         provider: new AnthropicProvider(this.config.anthropicApiKey),
-        model: 'claude-opus-5',
+        model: providerDefaults.anthropic || 'claude-3-opus-20240229',
       };
     }
     if (this.config.geminiApiKey) {
       return {
         provider: new GeminiProvider(this.config.geminiApiKey),
-        model: 'gemini-4-argon',
+        model: providerDefaults.gemini || 'gemini-2.0-pro-exp-02-05',
       };
     }
     if (this.config.openaiApiKey || this.config.openaiBaseUrl) {
@@ -112,7 +114,7 @@ export class ProviderRouter {
           this.config.openaiApiKey || 'no-key-required',
           this.config.openaiBaseUrl
         ),
-        model: 'o3-mini',
+        model: providerDefaults.openai || 'o3-mini',
       };
     }
 

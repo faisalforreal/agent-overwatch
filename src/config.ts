@@ -118,15 +118,11 @@ export function resolveConfig(
   const envOpenAI = process.env.OPENAI_API_KEY;
   const envOpenAIBaseUrl = process.env.OPENAI_BASE_URL;
 
-  const envJuniorModel =
-    process.env[`${envPrefix}_JUNIOR_MODEL`] || process.env.OVERWATCH_JUNIOR_MODEL;
-  const envMentorModel =
-    process.env[`${envPrefix}_MENTOR_MODEL`] || process.env.OVERWATCH_MENTOR_MODEL;
-  const envMaxCallsStr =
-    process.env[`${envPrefix}_MAX_CALLS`] || process.env.OVERWATCH_MAX_CALLS;
+  const envJuniorModel = process.env[`${envPrefix}_JUNIOR_MODEL`];
+  const envMentorModel = process.env[`${envPrefix}_MENTOR_MODEL`];
+  const envMaxCallsStr = process.env[`${envPrefix}_MAX_CALLS`];
   const envMaxCalls = envMaxCallsStr ? parseInt(envMaxCallsStr, 10) : undefined;
-  const envTimeoutStr =
-    process.env[`${envPrefix}_TIMEOUT_MS`] || process.env.OVERWATCH_TIMEOUT_MS;
+  const envTimeoutStr = process.env[`${envPrefix}_TIMEOUT_MS`];
   const envTimeout = envTimeoutStr ? parseInt(envTimeoutStr, 10) : undefined;
 
   return {

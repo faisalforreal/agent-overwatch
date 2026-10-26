@@ -62,8 +62,8 @@ export function loadModelsData(customPath?: string): ModelsData {
     models: [
       { pattern: '.*fable.*', tier: 'frontier', ordinal: 3, reasoning: true, description: 'Fable series', inputCostPerMillion: 15.0, outputCostPerMillion: 75.0 },
       { pattern: '.*opus.*', tier: 'frontier', ordinal: 2, reasoning: true, description: 'Opus series', inputCostPerMillion: 15.0, outputCostPerMillion: 75.0 },
-      { pattern: '.*o3.*', tier: 'frontier', ordinal: 2, reasoning: true, description: 'o3 series', inputCostPerMillion: 1.1, outputCostPerMillion: 4.4 },
-      { pattern: '.*o1.*', tier: 'frontier', ordinal: 1, reasoning: true, description: 'o1 series', inputCostPerMillion: 15.0, outputCostPerMillion: 60.0 },
+      { pattern: '^(openai/)?o3(-mini)?$', tier: 'frontier', ordinal: 2, reasoning: true, description: 'o3 series', inputCostPerMillion: 1.1, outputCostPerMillion: 4.4 },
+      { pattern: '^(openai/)?o1(-preview|-mini)?$', tier: 'frontier', ordinal: 1, reasoning: true, description: 'o1 series', inputCostPerMillion: 15.0, outputCostPerMillion: 60.0 },
       { pattern: '.*sonnet.*', tier: 'strong', ordinal: 2, reasoning: false, description: 'Sonnet series', inputCostPerMillion: 3.0, outputCostPerMillion: 15.0 },
       { pattern: '.*deepseek.*', tier: 'strong', ordinal: 2, reasoning: true, description: 'DeepSeek series', inputCostPerMillion: 0.55, outputCostPerMillion: 2.19 },
       { pattern: '.*gpt-4o$', tier: 'strong', ordinal: 2, reasoning: false, description: 'GPT-4o', inputCostPerMillion: 2.5, outputCostPerMillion: 10.0 },

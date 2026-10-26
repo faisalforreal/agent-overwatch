@@ -43,15 +43,20 @@ export async function executeReview(
   }
 
   const repoPath = input.repo_path || process.cwd();
+  // Use the real git diff when repo_path was explicitly provided by the caller.
+  // When only falling back to process.cwd(), the caller had no repo context — honour
+  // their draft_code_or_diff instead of silently overwriting it with an unrelated diff.
   let gitDiff = input.draft_code_or_diff || '';
   let notes = '';
 
-  if (repoPath) {
+  if (input.repo_path) {
     if (onProgress) onProgress(10, 100, 'Gathering git diff across repository...');
     const gitCtx = gatherGitContext(repoPath);
     if (gitCtx.gitDiff) {
       gitDiff = gitCtx.gitDiff;
     }
+    notes = readRepoNotes(repoPath);
+  } else {
     notes = readRepoNotes(repoPath);
   }
 

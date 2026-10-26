@@ -79,7 +79,7 @@ export class AnthropicProvider implements MentorProvider {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
       controller.abort();
-    }, options.timeoutMs || 90000);
+    }, options.timeoutMs || DEFAULT_TIMEOUT_MS);
 
     // Keep-alive progress ticker
     let progressInterval: NodeJS.Timeout | undefined;

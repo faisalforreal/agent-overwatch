@@ -1,4 +1,5 @@
 import { OverwatchFeedback, OverwatchFeedbackSchema, Verdict } from '../types.js';
+import { APP_NAME } from '../constants.js';
 
 export function cleanJsonFences(text: string): string {
   let cleaned = text.trim();
@@ -106,7 +107,8 @@ export function formatFeedbackAsMarkdown(fb: OverwatchFeedback): string {
   const verdictEmoji =
     fb.verdict === 'APPROVED' ? '✅' : fb.verdict === 'NEEDS_REFINEMENT' ? '⚠️' : '🚨';
 
-  let md = `### Overwatch Verdict: ${verdictEmoji} **${fb.verdict}**\n\n`;
+  const titleName = APP_NAME.charAt(0).toUpperCase() + APP_NAME.slice(1);
+  let md = `### ${titleName} Verdict: ${verdictEmoji} **${fb.verdict}**\n\n`;
   md += `> ${fb.summary}\n\n`;
 
   if (fb.defects && fb.defects.length > 0) {

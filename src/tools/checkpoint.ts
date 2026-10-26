@@ -32,17 +32,11 @@ export async function executeCheckpoint(
   }
 
   const repoPath = input.repo_path || process.cwd();
-  let gitDiff = '';
-  let gitStatus = '';
-  let notes = '';
-
-  if (repoPath) {
-    if (onProgress) onProgress(10, 100, 'Gathering git diff and status...');
-    const gitCtx = gatherGitContext(repoPath);
-    gitDiff = gitCtx.gitDiff || '';
-    gitStatus = gitCtx.gitStatus || '';
-    notes = readRepoNotes(repoPath);
-  }
+  if (onProgress) onProgress(10, 100, 'Gathering git diff and status...');
+  const gitCtx = gatherGitContext(repoPath);
+  const gitDiff = gitCtx.gitDiff || '';
+  const gitStatus = gitCtx.gitStatus || '';
+  const notes = readRepoNotes(repoPath);
 
   const prompt = buildCheckpointPrompt(input, {
     gitDiff,

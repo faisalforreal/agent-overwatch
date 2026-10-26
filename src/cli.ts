@@ -103,8 +103,10 @@ export function createCli(): Command {
             }
           } catch {}
         }
+        // Display 'vscode (Cline)' to clarify the client actually configured is the Cline extension
+        const displayName = cl === 'vscode' ? 'vscode (Cline)' : cl;
         console.log(
-          `  - ${cl.padEnd(12)}: ${registered ? '✅ Configured' : '⚪ Not registered'} (${paths.mcpConfigPath || 'n/a'})`
+          `  - ${displayName.padEnd(16)}: ${registered ? '✅ Configured' : '⚪ Not registered'} (${paths.mcpConfigPath || 'n/a'})`
         );
       }
 

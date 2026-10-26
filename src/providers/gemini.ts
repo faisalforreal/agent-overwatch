@@ -68,7 +68,7 @@ export class GeminiProvider implements MentorProvider {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
       controller.abort();
-    }, options.timeoutMs || 90000);
+    }, options.timeoutMs || DEFAULT_TIMEOUT_MS);
 
     let progressInterval: NodeJS.Timeout | undefined;
     if (options.onProgress) {

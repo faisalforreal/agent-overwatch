@@ -51,11 +51,16 @@ export function readFileSafely(
 
   const absPath = path.resolve(repoPath, relativePath);
   try {
-    if (!fs.existsSync(absPath) || !fs.statSync(absPath).isFile()) {
+    let stat: fs.Stats;
+    try {
+      stat = fs.statSync(absPath);
+    } catch {
+      return null;
+    }
+    if (!stat.isFile()) {
       return null;
     }
 
-    const stat = fs.statSync(absPath);
     let raw = fs.readFileSync(absPath, 'utf-8');
     let truncated = false;
 
