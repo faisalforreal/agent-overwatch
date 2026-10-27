@@ -1,10 +1,15 @@
 {
-  "name": "overwatch",
+  "name": "agent-overwatch",
   "version": "1.0.0",
   "description": "Steer junior AI coding models with frontier mentor models at mandatory checkpoints via MCP, Skill, and CLI.",
   "type": "module",
   "bin": {
+    "agent-overwatch": "./bin/agent-overwatch.js",
     "overwatch": "./bin/overwatch.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/faisalforreal/agent-overwatch.git"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -31,6 +36,7 @@
     "steering",
     "code-review",
     "llm",
+    "agent-overwatch",
     "overwatch",
     "antigravity"
   ],
