@@ -116,4 +116,18 @@ describe('Client Installers Suite', () => {
     const toml = fs.readFileSync(paths.mcpConfigPath!, 'utf-8');
     expect(toml).toContain('[mcp_servers.overwatch]');
   });
+
+  it('installs with useLocal flag pointing command to node and args to local bin', () => {
+    installForClient('antigravity', {
+      customHome: tmpHome,
+      workspaceRoot: tmpWs,
+      useLocal: true,
+    });
+
+    const paths = getClientPaths('antigravity', tmpHome, tmpWs);
+    const mcpJson = JSON.parse(fs.readFileSync(paths.mcpConfigPath!, 'utf-8'));
+    expect(mcpJson.mcpServers[APP_NAME].command).toBe(process.execPath);
+    expect(mcpJson.mcpServers[APP_NAME].args[0]).toContain('overwatch.js');
+    expect(mcpJson.mcpServers[APP_NAME].args[1]).toBe('serve');
+  });
 });

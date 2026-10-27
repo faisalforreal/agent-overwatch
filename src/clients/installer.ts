@@ -102,10 +102,22 @@ export function getClientPaths(
   }
 }
 
-export function generateMcpServerEntry(execPath?: string): { command: string; args: string[] } {
+export function generateMcpServerEntry(
+  execPath?: string,
+  args?: string[],
+  useLocal?: boolean
+): { command: string; args: string[] } {
+  if (useLocal) {
+    const localBin = path.resolve(process.cwd(), 'bin', `${BIN_NAME}.js`);
+    return {
+      command: process.execPath,
+      args: [localBin, 'serve'],
+    };
+  }
+
   return {
     command: execPath || BIN_NAME,
-    args: ['serve'],
+    args: args || ['serve'],
   };
 }
 
@@ -150,7 +162,7 @@ ${baseRules}
  */
 function manageCodexToml(
   filePath: string,
-  options: { dryRun?: boolean; uninstall?: boolean; execPath?: string }
+  options: { dryRun?: boolean; uninstall?: boolean; execPath?: string; useLocal?: boolean }
 ): { modified: boolean; backup?: string } {
   const dir = path.dirname(filePath);
   let content = '';
@@ -178,8 +190,9 @@ function manageCodexToml(
   }
 
   // Install
-  const execCmd = options.execPath || BIN_NAME;
-  const tomlEntry = `\n[mcp_servers.${APP_NAME}]\ncommand = "${execCmd}"\nargs = ["serve"]\nenabled = true\n`;
+  const entry = generateMcpServerEntry(options.execPath, undefined, options.useLocal);
+  const argsJson = JSON.stringify(entry.args);
+  const tomlEntry = `\n[mcp_servers.${APP_NAME}]\ncommand = "${entry.command}"\nargs = ${argsJson}\nenabled = true\n`;
 
   if (!sectionRegex.test(content)) {
     content = content ? `${content.trim()}\n${tomlEntry}` : tomlEntry.trim() + '\n';
@@ -207,6 +220,7 @@ export function installForClient(
     customHome?: string;
     workspaceRoot?: string;
     execPath?: string;
+    useLocal?: boolean;
     skillSourceContent?: string;
   } = {}
 ): ClientInstallResult {
@@ -256,7 +270,7 @@ export function installForClient(
         pathsModified.push(paths.mcpConfigPath);
       }
     } else {
-      const entry = generateMcpServerEntry(options.execPath);
+      const entry = generateMcpServerEntry(options.execPath, undefined, options.useLocal);
       existingJson.mcpServers[APP_NAME] = entry;
 
       if (!options.dryRun) {

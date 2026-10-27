@@ -129,6 +129,7 @@ export function createCli(): Command {
       '--client <client>',
       'Target client (antigravity, claude_code, cursor, windsurf, vscode, codex, all)'
     )
+    .option('--local', 'Register local development binary path for instant code reloads on npm run build')
     .option('--dry-run', 'Preview changes without modifying any files')
     .option('--uninstall', `Remove ${APP_NAME} from the specified client`)
     .action((opts) => {
@@ -145,6 +146,7 @@ export function createCli(): Command {
         const res = installForClient(c, {
           dryRun: opts.dryRun,
           uninstall: opts.uninstall,
+          useLocal: opts.local,
         });
 
         console.log(`[${c}] ${res.message}`);
