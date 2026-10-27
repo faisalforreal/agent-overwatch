@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "agent-overwatch": {
+      "command": "agent-overwatch",
+      "args": ["serve"]
+    }
+  }
+}

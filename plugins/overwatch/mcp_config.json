@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "overwatch": {
-      "command": "overwatch",
-      "args": ["serve"]
-    }
-  }
-}
