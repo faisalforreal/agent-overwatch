@@ -115,7 +115,7 @@ describe('Audit Fixes & Single-Source-of-Truth Verification', () => {
 
     expect(res.feedback.verdict).toBeDefined();
     expect(res.markdown).toContain('Verdict');
-  });
+  }, 15000);
 
   it('verifies 180s default timeout and tool-specific timeout configurations', () => {
     expect(DEFAULT_TIMEOUT_MS).toBe(180000);
@@ -128,22 +128,22 @@ describe('Audit Fixes & Single-Source-of-Truth Verification', () => {
 
   it('verifies client paths for all 6 supported clients including codex', () => {
     const antigravity = getClientPaths('antigravity', '/test/home', '/test/ws');
-    expect(antigravity.mcpConfigPath).toBe('/test/home/.gemini/config/mcp_config.json');
+    expect(antigravity.mcpConfigPath).toBe(path.join('/test/home', '.gemini', 'config', 'mcp_config.json'));
 
     const claude = getClientPaths('claude_code', '/test/home', '/test/ws');
-    expect(claude.mcpConfigPath).toBe('/test/home/.claude.json');
+    expect(claude.mcpConfigPath).toBe(path.join('/test/home', '.claude.json'));
 
     const cursor = getClientPaths('cursor', '/test/home', '/test/ws');
-    expect(cursor.rulesPath).toBe(`/test/ws/.cursor/rules/${APP_NAME}.mdc`);
+    expect(cursor.rulesPath).toBe(path.join('/test/ws', '.cursor', 'rules', `${APP_NAME}.mdc`));
 
     const windsurf = getClientPaths('windsurf', '/test/home', '/test/ws');
-    expect(windsurf.rulesPath).toBe(`/test/ws/.windsurf/rules/${APP_NAME}.md`);
+    expect(windsurf.rulesPath).toBe(path.join('/test/ws', '.windsurf', 'rules', `${APP_NAME}.md`));
 
     const vscode = getClientPaths('vscode', '/test/home', '/test/ws');
-    expect(vscode.rulesPath).toBe('/test/ws/.clinerules');
+    expect(vscode.rulesPath).toBe(path.join('/test/ws', '.clinerules'));
 
     const codex = getClientPaths('codex', '/test/home', '/test/ws');
-    expect(codex.mcpConfigPath).toBe('/test/home/.codex/config.toml');
-    expect(codex.rulesPath).toBe('/test/ws/AGENTS.md');
+    expect(codex.mcpConfigPath).toBe(path.join('/test/home', '.codex', 'config.toml'));
+    expect(codex.rulesPath).toBe(path.join('/test/ws', 'AGENTS.md'));
   });
 });

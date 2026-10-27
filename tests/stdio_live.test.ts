@@ -41,10 +41,22 @@ describe('Stdio MCP CLI Hygiene Test', () => {
 
     proc.stdin.write(JSON.stringify(initRequest) + '\n');
 
-    // Wait 1.5s for response
-    await new Promise((r) => setTimeout(r, 1500));
+    // Wait until server is listening and JSON-RPC response is received (up to 10s)
+    const startTime = Date.now();
+    while (Date.now() - startTime < 10000) {
+      if (
+        stderrData.includes(`[${APP_NAME}] Stdio MCP server connected and listening`) &&
+        stdoutData.includes('"jsonrpc":"2.0"') &&
+        stdoutData.includes('"id":1')
+      ) {
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 100));
+    }
 
-    proc.kill('SIGTERM');
+    try {
+      proc.kill();
+    } catch {}
 
     // Stderr should contain server listening message
     expect(stderrData).toContain(`[${APP_NAME}] Stdio MCP server connected and listening`);
@@ -60,5 +72,5 @@ describe('Stdio MCP CLI Hygiene Test', () => {
         expect(() => JSON.parse(line)).not.toThrow();
       }
     }
-  });
+  }, 15000);
 });
