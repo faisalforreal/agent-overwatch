@@ -109,4 +109,26 @@ The plan completely ignores the database migrations.
     expect(feedback.verdict).toBe('APPROVED');
     expect(feedback.summary).toContain('Architectural plan');
   });
+
+  it('routes to Bedrock provider when Bedrock keys and model are configured', () => {
+    const config = resolveConfig({
+      bedrockApiKey: 'test-bedrock-key',
+      awsRegion: 'eu-west-1',
+    });
+    const router = new ProviderRouter(config);
+    const route = router.resolveProviderForModel('bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0');
+    expect(route.provider.name).toBe('bedrock');
+    expect(route.model).toBe('anthropic.claude-3-5-sonnet-20241022-v2:0');
+  });
+
+  it('routes to CustomProvider when customBaseUrl is set for any model', () => {
+    const config = resolveConfig({
+      customBaseUrl: 'http://localhost:11434/v1',
+      customApiKey: 'ollama',
+    });
+    const router = new ProviderRouter(config);
+    const route = router.resolveProviderForModel('llama3.3:70b');
+    expect(route.provider.name).toBe('custom');
+    expect(route.model).toBe('llama3.3:70b');
+  });
 });

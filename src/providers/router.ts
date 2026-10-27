@@ -4,6 +4,8 @@ import { AnthropicProvider } from './anthropic.js';
 import { OpenAIProvider } from './openai.js';
 import { GeminiProvider } from './gemini.js';
 import { OpenRouterProvider } from './openrouter.js';
+import { BedrockProvider } from './bedrock.js';
+import { CustomProvider } from './custom.js';
 import { MockProvider } from './mock.js';
 import { parseOverwatchFeedback } from '../prompts/parser.js';
 import { OverwatchFeedback } from '../types.js';
@@ -36,7 +38,56 @@ export class ProviderRouter {
 
     const m = modelName.toLowerCase();
 
-    // 1. Direct Anthropic
+    // 1. Amazon Bedrock explicit model or prefix
+    const hasBedrockAuth =
+      Boolean(this.config.bedrockApiKey) ||
+      Boolean(this.config.awsAccessKeyId && this.config.awsSecretAccessKey);
+    if (
+      hasBedrockAuth &&
+      (m.startsWith('bedrock/') ||
+        m.startsWith('amazon.') ||
+        m.startsWith('anthropic.claude') ||
+        m.startsWith('meta.llama'))
+    ) {
+      const cleanModel = modelName.replace(/^bedrock\//, '');
+      return {
+        provider: new BedrockProvider({
+          apiKey: this.config.bedrockApiKey,
+          accessKeyId: this.config.awsAccessKeyId,
+          secretAccessKey: this.config.awsSecretAccessKey,
+          sessionToken: this.config.awsSessionToken,
+          region: this.config.awsRegion,
+          baseUrl: this.config.bedrockBaseUrl,
+          defaultModel: cleanModel,
+        }),
+        model: cleanModel,
+      };
+    }
+
+    // 2. Custom endpoint explicit prefix (custom/..., local/..., ollama/...)
+    if (
+      m.startsWith('custom/') ||
+      m.startsWith('local/') ||
+      m.startsWith('ollama/')
+    ) {
+      const cleanModel = modelName.replace(/^(custom|local|ollama)\//, '');
+      const baseUrl =
+        this.config.customBaseUrl ||
+        this.config.openaiBaseUrl ||
+        'http://localhost:11434/v1';
+      return {
+        provider: new CustomProvider({
+          baseUrl,
+          apiKey: this.config.customApiKey || this.config.openaiApiKey,
+          customHeaders: this.config.customHeaders,
+          defaultModel: cleanModel,
+          name: m.startsWith('ollama/') ? 'ollama' : 'custom',
+        }),
+        model: cleanModel,
+      };
+    }
+
+    // 3. Direct Anthropic
     if (
       this.config.anthropicApiKey &&
       (m.includes('claude') || m.startsWith('anthropic/'))
@@ -48,7 +99,7 @@ export class ProviderRouter {
       };
     }
 
-    // 2. Direct Gemini
+    // 4. Direct Gemini
     if (
       this.config.geminiApiKey &&
       (m.includes('gemini') || m.startsWith('google/'))
@@ -60,10 +111,12 @@ export class ProviderRouter {
       };
     }
 
-    // 3. Direct OpenAI or custom endpoint
+    // 5. Direct OpenAI or custom OpenAI endpoint
+    // If openaiBaseUrl is set, allow ANY model to be routed through it (e.g. Ollama, Groq, DeepSeek, local vLLM)
     if (
       (this.config.openaiApiKey || this.config.openaiBaseUrl) &&
-      (m.startsWith('o1') ||
+      (this.config.openaiBaseUrl ||
+        m.startsWith('o1') ||
         m.startsWith('o3') ||
         m.includes('gpt-') ||
         m.startsWith('openai/'))
@@ -78,7 +131,41 @@ export class ProviderRouter {
       };
     }
 
-    // 4. OpenRouter (can route any model name including anthropic/..., google/..., fable-...)
+    // 6. Generic Custom endpoint configured via customBaseUrl (accepts ANY model)
+    if (this.config.customBaseUrl) {
+      return {
+        provider: new CustomProvider({
+          baseUrl: this.config.customBaseUrl,
+          apiKey: this.config.customApiKey,
+          customHeaders: this.config.customHeaders,
+          defaultModel: modelName,
+        }),
+        model: modelName,
+      };
+    }
+
+    // 7. Amazon Bedrock for Claude if Bedrock keys exist and direct Anthropic key does not
+    if (hasBedrockAuth && m.includes('claude')) {
+      const bedrockClaudeModel = m.includes('3-5-sonnet')
+        ? 'anthropic.claude-3-5-sonnet-20241022-v2:0'
+        : m.includes('opus')
+          ? 'anthropic.claude-3-opus-20240229-v1:0'
+          : 'anthropic.claude-3-5-sonnet-20241022-v2:0';
+      return {
+        provider: new BedrockProvider({
+          apiKey: this.config.bedrockApiKey,
+          accessKeyId: this.config.awsAccessKeyId,
+          secretAccessKey: this.config.awsSecretAccessKey,
+          sessionToken: this.config.awsSessionToken,
+          region: this.config.awsRegion,
+          baseUrl: this.config.bedrockBaseUrl,
+          defaultModel: bedrockClaudeModel,
+        }),
+        model: bedrockClaudeModel,
+      };
+    }
+
+    // 8. OpenRouter (can route any model name including anthropic/..., google/..., fable-...)
     if (this.config.openrouterApiKey) {
       let orModel = modelName;
       if (m.includes('opus') && !m.includes('/')) {
@@ -94,7 +181,7 @@ export class ProviderRouter {
       };
     }
 
-    // 5. Fallback to any available direct provider using seed defaults
+    // 9. Fallback to any available direct provider using seed defaults
     const providerDefaults = getModelDefaults().providerDefaults || {};
     if (this.config.anthropicApiKey) {
       return {
@@ -117,13 +204,37 @@ export class ProviderRouter {
         model: providerDefaults.openai || 'o3-mini',
       };
     }
+    if (hasBedrockAuth) {
+      return {
+        provider: new BedrockProvider({
+          apiKey: this.config.bedrockApiKey,
+          accessKeyId: this.config.awsAccessKeyId,
+          secretAccessKey: this.config.awsSecretAccessKey,
+          sessionToken: this.config.awsSessionToken,
+          region: this.config.awsRegion,
+          baseUrl: this.config.bedrockBaseUrl,
+        }),
+        model: 'anthropic.claude-3-5-sonnet-20241022-v2:0',
+      };
+    }
+    if (this.config.customBaseUrl) {
+      return {
+        provider: new CustomProvider({
+          baseUrl: this.config.customBaseUrl,
+          apiKey: this.config.customApiKey,
+          customHeaders: this.config.customHeaders,
+          defaultModel: modelName,
+        }),
+        model: modelName,
+      };
+    }
 
     // If no provider keys exist, return mock with failure warning
     return {
       provider: new MockProvider({
         shouldFail: true,
         failureMessage:
-          'No provider API keys configured. Set ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY.',
+          'No provider API keys configured. Set ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY, BEDROCK_API_KEY (or AWS credentials), or CUSTOM_BASE_URL.',
       }),
       model: modelName,
     };
