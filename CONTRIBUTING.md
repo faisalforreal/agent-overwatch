@@ -1,6 +1,6 @@
-# Contributing to Overwatch
+# Contributing to Agent-Overwatch
 
-Thank you for contributing to Overwatch! This project helps developers maximize the effectiveness of dual-model agent setups by steering junior models with senior mentor models.
+Thank you for contributing to Agent-Overwatch! This project helps developers maximize the effectiveness of dual-model agent setups by steering junior models with senior mentor models.
 
 ---
 
@@ -35,8 +35,8 @@ Thank you for contributing to Overwatch! This project helps developers maximize 
 
 1. Clone the repository and install dependencies:
    ```bash
-   git clone https://github.com/overwatch/overwatch.git
-   cd overwatch
+   git clone https://github.com/faisalforreal/agent-overwatch.git
+   cd agent-overwatch
    npm install
    ```
 

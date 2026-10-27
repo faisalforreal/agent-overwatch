@@ -1,6 +1,6 @@
-# Overwatch Evaluation Protocol (`docs/EVAL.md`)
+# Agent-Overwatch Evaluation Protocol (`docs/EVAL.md`)
 
-This document outlines the rigorous benchmarking methodology for evaluating coding agent performance: **Junior Model Alone** vs. **Junior Model + Overwatch Mentor Steering**.
+This document outlines the rigorous benchmarking methodology for evaluating coding agent performance: **Junior Model Alone** vs. **Junior Model + Agent-Overwatch Mentor Steering**.
 
 > [!IMPORTANT]
 > Do NOT claim performance or accuracy improvements in project documentation without conducting and publishing empirical benchmark results using this protocol.
