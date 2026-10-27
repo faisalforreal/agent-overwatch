@@ -3,8 +3,8 @@
  * Rename here to update across the entire codebase.
  */
 
-export const APP_NAME = 'overwatch';
-export const BIN_NAME = 'overwatch';
+export const APP_NAME = 'agent-overwatch';
+export const BIN_NAME = 'agent-overwatch';
 export const CONFIG_DIR_NAME = `.${APP_NAME}`;
 export const CONFIG_FILE = 'config.json';
 export const TARGET_NOTES_DIR = `.${APP_NAME}`;
