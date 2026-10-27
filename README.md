@@ -89,6 +89,21 @@ You can also install across all detected clients at once:
 npx overwatch setup --client all
 ```
 
+### Developing Locally & Updating in Antigravity
+
+When working on or customizing Overwatch, you can install the server in **local development mode**:
+
+```bash
+# In your local clone of the Overwatch repo:
+npm run build
+node bin/overwatch.js setup --client antigravity --local
+```
+
+**How updates work:**
+1. **Local Dev Mode (`--local`)**: Registers `node /absolute/path/to/bin/overwatch.js serve` in `~/.gemini/config/mcp_config.json`. Whenever you make code modifications and run `npm run build`, Antigravity **automatically uses your latest code on the next session start or reload**. You never need to reinstall or re-register!
+2. **Global NPM Mode**: If installed via `npm i -g overwatch`, update to the latest release at any time with `npm i -g overwatch@latest`.
+3. **NPX Mode**: If registered via `npx -y overwatch@latest serve`, npm automatically checks for and launches the newest published version.
+
 ---
 
 ## Reasoning Timeouts & Fast Mode
@@ -142,11 +157,42 @@ Overwatch supports direct API credentials or unified routing:
    export GEMINI_API_KEY="AIzaSy..."
    ```
 
-4. **Direct OpenAI / Custom Endpoints**:
-   Connects to OpenAI o3/o1 or local Ollama / vLLM / LiteLLM instances:
+4. **Direct OpenAI**:
+   Connects to OpenAI o3, o1, or GPT-4o:
    ```bash
    export OPENAI_API_KEY="sk-..."
-   export OPENAI_BASE_URL="http://localhost:11434/v1" # Optional for local Ollama
+   ```
+
+5. **Amazon Bedrock**:
+   Access Claude 3.5/3.7 Sonnet, Claude Opus, and Amazon Nova on AWS Bedrock via Converse API:
+   ```bash
+   # Option A: Bedrock API Key / Bearer token
+   export BEDROCK_API_KEY="your-bedrock-api-key"
+   export AWS_REGION="us-east-1"
+
+   # Option B: AWS SigV4 credentials (pure Node, zero AWS SDK dependency)
+   export AWS_ACCESS_KEY_ID="AKIA..."
+   export AWS_SECRET_ACCESS_KEY="..."
+   export AWS_REGION="us-east-1"
+   export AWS_SESSION_TOKEN="..." # Optional for temporary credentials
+   ```
+
+6. **Any Custom Endpoint / Any Model / Any Base URL**:
+   Connect Overwatch to **any** OpenAI-compatible API, local model runner, or internal corporate gateway (Ollama, LM Studio, Groq, DeepSeek API, vLLM, LiteLLM, Cerebras, etc.):
+   ```bash
+   # Example: Local Ollama with Llama 3.3 or DeepSeek R1
+   export CUSTOM_BASE_URL="http://localhost:11434/v1"
+   export CUSTOM_MODEL="llama3.3:70b"
+
+   # Example: DeepSeek Direct API
+   export CUSTOM_BASE_URL="https://api.deepseek.com/v1"
+   export CUSTOM_API_KEY="sk-..."
+   export CUSTOM_MODEL="deepseek-reasoner"
+
+   # Example: Custom enterprise gateway with custom headers
+   export CUSTOM_BASE_URL="https://llm.corp.internal/v1"
+   export CUSTOM_API_KEY="corp-token-xyz"
+   export CUSTOM_HEADERS='{"X-Internal-Dept": "Engineering"}'
    ```
 
 Run the interactive wizard to save your keys:
