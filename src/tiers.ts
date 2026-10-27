@@ -95,16 +95,18 @@ export function estimateModelCost(
   modelName: string,
   promptTokens: number,
   completionTokens: number,
-  customPath?: string
+  customPath?: string,
+  additionalModels?: ModelEntry[]
 ): number {
   if (!modelName) return 0;
   const cleanName = modelName.trim().toLowerCase();
   const data = loadModelsData(customPath);
+  const models = [...(additionalModels || []), ...data.models];
 
   let inputCost = 3.0; // default fallback ($/M)
   let outputCost = 15.0;
 
-  for (const entry of data.models) {
+  for (const entry of models) {
     try {
       const reg = new RegExp(entry.pattern, 'i');
       if (reg.test(cleanName)) {
@@ -147,15 +149,20 @@ export interface ModelMatchResult {
   isUnknown: boolean;
 }
 
-export function getModelTier(modelName: string, customPath?: string): ModelMatchResult {
+export function getModelTier(
+  modelName: string,
+  customPath?: string,
+  additionalModels?: ModelEntry[]
+): ModelMatchResult {
   if (!modelName || typeof modelName !== 'string') {
     return { tier: 'medium', ordinal: 1, reasoning: false, isUnknown: true };
   }
 
   const cleanName = modelName.trim().toLowerCase();
   const data = loadModelsData(customPath);
+  const models = [...(additionalModels || []), ...data.models];
 
-  for (const entry of data.models) {
+  for (const entry of models) {
     try {
       const reg = new RegExp(entry.pattern, 'i');
       if (reg.test(cleanName)) {
@@ -197,10 +204,14 @@ export interface TierValidationResult {
 export function validateMentorSuperiority(
   mentorModel: string,
   juniorModel: string,
-  options: { customModelsPath?: string; allowSameTier?: boolean } = {}
+  options: {
+    customModelsPath?: string;
+    allowSameTier?: boolean;
+    customModels?: ModelEntry[];
+  } = {}
 ): TierValidationResult {
-  const mentorMatch = getModelTier(mentorModel, options.customModelsPath);
-  const juniorMatch = getModelTier(juniorModel, options.customModelsPath);
+  const mentorMatch = getModelTier(mentorModel, options.customModelsPath, options.customModels);
+  const juniorMatch = getModelTier(juniorModel, options.customModelsPath, options.customModels);
 
   const tierDiff = compareTiers(mentorMatch.tier, juniorMatch.tier);
   let valid = false;

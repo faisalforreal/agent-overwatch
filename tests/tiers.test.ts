@@ -57,4 +57,30 @@ describe('Tier Validation Engine', () => {
     expect(unknownRes.juniorIsUnknown).toBe(true);
     expect(unknownRes.warning).toContain('Heuristic tier warning');
   });
+
+  it('respects custom additional models when provided', () => {
+    const customModels = [
+      {
+        pattern: '^my-internal-supermodel.*',
+        tier: 'frontier' as const,
+        ordinal: 3,
+        reasoning: true,
+        description: 'Internal fine-tuned model',
+        inputCostPerMillion: 2.0,
+        outputCostPerMillion: 8.0,
+      },
+    ];
+
+    const match = getModelTier('my-internal-supermodel-v1', undefined, customModels);
+    expect(match.tier).toBe('frontier');
+    expect(match.isUnknown).toBe(false);
+
+    const validation = validateMentorSuperiority(
+      'my-internal-supermodel-v1',
+      'gemini-2.0-flash',
+      { customModels }
+    );
+    expect(validation.valid).toBe(true);
+    expect(validation.mentorTier).toBe('frontier');
+  });
 });
