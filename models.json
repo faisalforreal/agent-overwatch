@@ -23,13 +23,13 @@
       "description": "Fable frontier model series"
     },
     {
-      "pattern": "^(anthropic/)?claude(-3)?-opus.*",
+      "pattern": "^(anthropic/|bedrock/)?(anthropic\\.)?claude(-3)?-opus.*",
       "tier": "frontier",
       "ordinal": 2,
       "reasoning": true,
       "inputCostPerMillion": 15.0,
       "outputCostPerMillion": 75.0,
-      "description": "Anthropic Claude 3 Opus flagship (claude-3-opus-20240229)"
+      "description": "Anthropic Claude 3 Opus flagship (claude-3-opus-20240229 or Bedrock)"
     },
     {
       "pattern": "^(openai/)?o3(-mini)?$",
@@ -50,13 +50,13 @@
       "description": "OpenAI o1 reasoning model"
     },
     {
-      "pattern": "^(anthropic/)?claude-3-7-sonnet.*",
+      "pattern": "^(anthropic/|bedrock/)?(anthropic\\.)?claude-3-7-sonnet.*",
       "tier": "strong",
       "ordinal": 3,
       "reasoning": true,
       "inputCostPerMillion": 3.0,
       "outputCostPerMillion": 15.0,
-      "description": "Anthropic Claude 3.7 Sonnet hybrid reasoning (claude-3-7-sonnet-20250219)"
+      "description": "Anthropic Claude 3.7 Sonnet hybrid reasoning (claude-3-7-sonnet-20250219 or Bedrock)"
     },
     {
       "pattern": "^(deepseek/)?(deepseek-reasoner|deepseek-r1).*",
@@ -77,13 +77,49 @@
       "description": "Google Gemini 2.0 Pro (gemini-2.0-pro-exp-02-05)"
     },
     {
-      "pattern": "^(anthropic/)?claude-3-5-sonnet.*",
+      "pattern": "^(anthropic/|bedrock/)?(anthropic\\.)?claude-3-5-sonnet.*",
       "tier": "strong",
       "ordinal": 2,
       "reasoning": false,
       "inputCostPerMillion": 3.0,
       "outputCostPerMillion": 15.0,
-      "description": "Anthropic Claude 3.5 Sonnet (claude-3-5-sonnet-20241022)"
+      "description": "Anthropic Claude 3.5 Sonnet (claude-3-5-sonnet-20241022 or Bedrock)"
+    },
+    {
+      "pattern": "^(bedrock/)?amazon\\.nova-pro.*",
+      "tier": "strong",
+      "ordinal": 2,
+      "reasoning": false,
+      "inputCostPerMillion": 0.8,
+      "outputCostPerMillion": 3.2,
+      "description": "Amazon Nova Pro on Bedrock"
+    },
+    {
+      "pattern": "^(meta-llama/|bedrock/)?(meta\\.)?llama-3\\.[123]-70b.*",
+      "tier": "strong",
+      "ordinal": 2,
+      "reasoning": false,
+      "inputCostPerMillion": 0.72,
+      "outputCostPerMillion": 0.72,
+      "description": "Meta Llama 3.1/3.2/3.3 70B Instruct"
+    },
+    {
+      "pattern": "^(qwen/)?qwen-2\\.5-(coder-)?(72b|32b).*",
+      "tier": "strong",
+      "ordinal": 2,
+      "reasoning": false,
+      "inputCostPerMillion": 0.35,
+      "outputCostPerMillion": 0.4,
+      "description": "Qwen 2.5 Coder 32B/72B"
+    },
+    {
+      "pattern": "^(mistralai/)?mistral-large.*",
+      "tier": "strong",
+      "ordinal": 2,
+      "reasoning": false,
+      "inputCostPerMillion": 2.0,
+      "outputCostPerMillion": 6.0,
+      "description": "Mistral Large"
     },
     {
       "pattern": "^(openai/)?gpt-4o(-202[4-9].*)?$",
@@ -131,6 +167,15 @@
       "description": "Google Gemini Flash-Lite & 8B edge models"
     },
     {
+      "pattern": "^(bedrock/)?amazon\\.nova-micro.*",
+      "tier": "small",
+      "ordinal": 2,
+      "reasoning": false,
+      "inputCostPerMillion": 0.035,
+      "outputCostPerMillion": 0.14,
+      "description": "Amazon Nova Micro on Bedrock"
+    },
+    {
       "pattern": "^(google/)?gemini-.*flash.*",
       "tier": "medium",
       "ordinal": 2,
@@ -147,6 +192,15 @@
       "inputCostPerMillion": 0.8,
       "outputCostPerMillion": 4.0,
       "description": "Anthropic Claude 3.5 Haiku (claude-3-5-haiku-20241022)"
+    },
+    {
+      "pattern": "^(bedrock/)?amazon\\.nova-lite.*",
+      "tier": "medium",
+      "ordinal": 2,
+      "reasoning": false,
+      "inputCostPerMillion": 0.06,
+      "outputCostPerMillion": 0.24,
+      "description": "Amazon Nova Lite on Bedrock"
     },
     {
       "pattern": "^(openai/)?gpt-4o-mini.*",

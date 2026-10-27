@@ -5,6 +5,7 @@ describe('Tier Validation Engine', () => {
   it('correctly maps frontier models', () => {
     expect(getModelTier('claude-opus-5').tier).toBe('frontier');
     expect(getModelTier('anthropic/claude-3-opus-20240229').tier).toBe('frontier');
+    expect(getModelTier('bedrock/anthropic.claude-3-opus-20240229-v1:0').tier).toBe('frontier');
     expect(getModelTier('fable-5.1').tier).toBe('frontier');
     expect(getModelTier('o3-mini').tier).toBe('frontier');
     expect(getModelTier('openai/o1').tier).toBe('frontier');
@@ -13,6 +14,11 @@ describe('Tier Validation Engine', () => {
   it('correctly maps strong models', () => {
     expect(getModelTier('claude-3-5-sonnet').tier).toBe('strong');
     expect(getModelTier('claude-3-7-sonnet').tier).toBe('strong');
+    expect(getModelTier('bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0').tier).toBe('strong');
+    expect(getModelTier('amazon.nova-pro-v1:0').tier).toBe('strong');
+    expect(getModelTier('llama-3.3-70b-instruct').tier).toBe('strong');
+    expect(getModelTier('qwen/qwen-2.5-coder-32b').tier).toBe('strong');
+    expect(getModelTier('mistral-large-latest').tier).toBe('strong');
     expect(getModelTier('deepseek/deepseek-r1').tier).toBe('strong');
     expect(getModelTier('gpt-4o').tier).toBe('strong');
     expect(getModelTier('gemini-2.0-pro').tier).toBe('strong');
