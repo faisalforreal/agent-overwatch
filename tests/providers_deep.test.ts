@@ -5,6 +5,7 @@ import { GeminiProvider } from '../src/providers/gemini.js';
 import { OpenRouterProvider } from '../src/providers/openrouter.js';
 import { ProviderRouter } from '../src/providers/router.js';
 import { resolveConfig } from '../src/config.js';
+import { APP_NAME } from '../src/constants.js';
 
 describe('Deep Native Providers Test Suite', () => {
   const originalFetch = globalThis.fetch;
@@ -256,8 +257,8 @@ describe('Deep Native Providers Test Suite', () => {
       });
 
       expect(headers['Authorization']).toBe('Bearer sk-or-test-key');
-      expect(headers['HTTP-Referer']).toBe('https://github.com/overwatch/overwatch');
-      expect(headers['X-Title']).toBe('overwatch');
+      expect(headers['HTTP-Referer']).toBe(`https://github.com/${APP_NAME}/${APP_NAME}`);
+      expect(headers['X-Title']).toBe(APP_NAME);
     });
   });
 

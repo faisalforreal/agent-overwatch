@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
+import { APP_NAME } from '../src/constants.js';
 import { fileURLToPath } from 'node:url';
 
 describe('Stdio MCP CLI Hygiene Test', () => {
@@ -46,7 +47,7 @@ describe('Stdio MCP CLI Hygiene Test', () => {
     proc.kill('SIGTERM');
 
     // Stderr should contain server listening message
-    expect(stderrData).toContain('[overwatch] Stdio MCP server connected and listening');
+    expect(stderrData).toContain(`[${APP_NAME}] Stdio MCP server connected and listening`);
 
     // Stdout must contain valid JSON-RPC
     expect(stdoutData).toContain('"jsonrpc":"2.0"');

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { installForClient, getClientPaths } from '../src/clients/installer.js';
-import { APP_NAME } from '../src/constants.js';
+import { APP_NAME, BIN_NAME } from '../src/constants.js';
 
 describe('Modern Client Rules & Config Installers Suite', () => {
   const tmpHome = path.join(os.tmpdir(), `overwatch-modern-home-${Date.now()}`);
@@ -80,7 +80,7 @@ describe('Modern Client Rules & Config Installers Suite', () => {
     expect(fs.existsSync(paths.rulesPath!)).toBe(true);
 
     const rules = fs.readFileSync(paths.rulesPath!, 'utf-8');
-    expect(rules).toContain('BEGIN OVERWATCH RULES');
+    expect(rules).toContain(`BEGIN ${APP_NAME.toUpperCase()} RULES`);
 
     // Uninstall cleans all
     installForClient('claude_code', {
@@ -105,7 +105,7 @@ describe('Modern Client Rules & Config Installers Suite', () => {
 
     const toml = fs.readFileSync(paths.mcpConfigPath!, 'utf-8');
     expect(toml).toContain(`[mcp_servers.${APP_NAME}]`);
-    expect(toml).toContain('command = "overwatch"');
+    expect(toml).toContain(`command = "${BIN_NAME}"`);
     expect(toml).toContain('args = ["serve"]');
     expect(toml).toContain('enabled = true');
 
@@ -164,6 +164,6 @@ describe('Modern Client Rules & Config Installers Suite', () => {
     expect(fs.existsSync(paths.rulesPath!)).toBe(true);
 
     const agentsMd = fs.readFileSync(paths.rulesPath!, 'utf-8');
-    expect(agentsMd).toContain('BEGIN OVERWATCH RULES');
+    expect(agentsMd).toContain(`BEGIN ${APP_NAME.toUpperCase()} RULES`);
   });
 });

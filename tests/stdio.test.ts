@@ -4,6 +4,15 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createOverwatchServer } from '../src/server.js';
 import { MockProvider } from '../src/providers/mock.js';
 import { resolveConfig } from '../src/config.js';
+import {
+  APP_NAME,
+  TOOL_PLAN_CHECK,
+  TOOL_CHECKPOINT,
+  TOOL_REVIEW,
+  TOOL_QUICK_HINT,
+  TOOL_VERIFY,
+  TOOL_STATUS,
+} from '../src/constants.js';
 
 describe('MCP Server Protocol Handshake', () => {
   it('connects, lists tools, and executes tool calls over MCP transport', async () => {
@@ -27,27 +36,28 @@ describe('MCP Server Protocol Handshake', () => {
     const toolsResult = await client.listTools();
     const toolNames = toolsResult.tools.map((t) => t.name);
 
-    expect(toolNames).toContain('overwatch_plan_check');
-    expect(toolNames).toContain('overwatch_checkpoint');
-    expect(toolNames).toContain('overwatch_review');
-    expect(toolNames).toContain('overwatch_quick_hint');
-    expect(toolNames).toContain('overwatch_verify');
-    expect(toolNames).toContain('overwatch_status');
+    expect(toolNames).toContain(TOOL_PLAN_CHECK);
+    expect(toolNames).toContain(TOOL_CHECKPOINT);
+    expect(toolNames).toContain(TOOL_REVIEW);
+    expect(toolNames).toContain(TOOL_QUICK_HINT);
+    expect(toolNames).toContain(TOOL_VERIFY);
+    expect(toolNames).toContain(TOOL_STATUS);
 
-    // 2. Call overwatch_status tool
+    // 2. Call status tool
     const statusCallResult = await client.callTool({
-      name: 'overwatch_status',
+      name: TOOL_STATUS,
       arguments: {},
     });
 
     expect(statusCallResult.content).toBeDefined();
     expect(Array.isArray(statusCallResult.content)).toBe(true);
     const contentText = (statusCallResult.content as any[])[0].text;
-    expect(contentText).toContain('Overwatch System Status');
+    const title = APP_NAME.charAt(0).toUpperCase() + APP_NAME.slice(1);
+    expect(contentText).toContain(`${title} System Status`);
 
-    // 3. Call overwatch_plan_check tool
+    // 3. Call plan_check tool
     const planCheckResult = await client.callTool({
-      name: 'overwatch_plan_check',
+      name: TOOL_PLAN_CHECK,
       arguments: {
         user_goal: 'Create an e-commerce cart',
         proposed_plan: '1. Model Cart and CartItem\n2. Add CartService',
@@ -55,7 +65,7 @@ describe('MCP Server Protocol Handshake', () => {
     });
 
     const planText = (planCheckResult.content as any[])[0].text;
-    expect(planText).toContain('Overwatch Verdict');
+    expect(planText).toContain(`${title} Verdict`);
 
     await client.close();
     await server.close();

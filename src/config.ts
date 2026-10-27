@@ -129,7 +129,7 @@ export function resolveConfig(
 ): OverwatchConfig {
   const fileConfig = loadConfigFile(customConfigPath);
   const modelDefaults = getModelDefaults();
-  const envPrefix = APP_NAME.toUpperCase();
+  const envPrefix = APP_NAME.toUpperCase().replace(/[^A-Z0-9]/g, '_');
 
   const envOpenRouter = process.env.OPENROUTER_API_KEY;
   const envAnthropic = process.env.ANTHROPIC_API_KEY;
@@ -139,7 +139,9 @@ export function resolveConfig(
 
   // Bedrock env vars
   const envBedrockApiKey =
-    process.env[`${envPrefix}_BEDROCK_API_KEY`] || process.env.BEDROCK_API_KEY;
+    process.env[`${envPrefix}_BEDROCK_API_KEY`] ||
+    process.env.OVERWATCH_BEDROCK_API_KEY ||
+    process.env.BEDROCK_API_KEY;
   const envAwsAccessKeyId =
     process.env[`${envPrefix}_AWS_ACCESS_KEY_ID`] || process.env.AWS_ACCESS_KEY_ID;
   const envAwsSecretAccessKey =
@@ -155,28 +157,42 @@ export function resolveConfig(
 
   // Custom endpoint env vars
   const envCustomApiKey =
-    process.env[`${envPrefix}_CUSTOM_API_KEY`] || process.env.CUSTOM_API_KEY;
+    process.env[`${envPrefix}_CUSTOM_API_KEY`] ||
+    process.env.OVERWATCH_CUSTOM_API_KEY ||
+    process.env.CUSTOM_API_KEY;
   const envCustomBaseUrl =
-    process.env[`${envPrefix}_CUSTOM_BASE_URL`] || process.env.CUSTOM_BASE_URL;
+    process.env[`${envPrefix}_CUSTOM_BASE_URL`] ||
+    process.env.OVERWATCH_CUSTOM_BASE_URL ||
+    process.env.CUSTOM_BASE_URL;
   const envCustomModel =
-    process.env[`${envPrefix}_CUSTOM_MODEL`] || process.env.CUSTOM_MODEL;
+    process.env[`${envPrefix}_CUSTOM_MODEL`] ||
+    process.env.OVERWATCH_CUSTOM_MODEL ||
+    process.env.CUSTOM_MODEL;
   let parsedCustomHeaders: Record<string, string> | undefined;
   const rawCustomHeaders =
-    process.env[`${envPrefix}_CUSTOM_HEADERS`] || process.env.CUSTOM_HEADERS;
+    process.env[`${envPrefix}_CUSTOM_HEADERS`] ||
+    process.env.OVERWATCH_CUSTOM_HEADERS ||
+    process.env.CUSTOM_HEADERS;
   if (rawCustomHeaders) {
     try {
       parsedCustomHeaders = JSON.parse(rawCustomHeaders);
     } catch {}
   }
   const envCustomProtocol = (
-    process.env[`${envPrefix}_CUSTOM_PROTOCOL`] || process.env.CUSTOM_PROTOCOL
+    process.env[`${envPrefix}_CUSTOM_PROTOCOL`] ||
+    process.env.OVERWATCH_CUSTOM_PROTOCOL ||
+    process.env.CUSTOM_PROTOCOL
   ) as 'openai' | 'anthropic' | undefined;
 
-  const envJuniorModel = process.env[`${envPrefix}_JUNIOR_MODEL`];
-  const envMentorModel = process.env[`${envPrefix}_MENTOR_MODEL`];
-  const envMaxCallsStr = process.env[`${envPrefix}_MAX_CALLS`];
+  const envJuniorModel =
+    process.env[`${envPrefix}_JUNIOR_MODEL`] || process.env.OVERWATCH_JUNIOR_MODEL;
+  const envMentorModel =
+    process.env[`${envPrefix}_MENTOR_MODEL`] || process.env.OVERWATCH_MENTOR_MODEL;
+  const envMaxCallsStr =
+    process.env[`${envPrefix}_MAX_CALLS`] || process.env.OVERWATCH_MAX_CALLS;
   const envMaxCalls = envMaxCallsStr ? parseInt(envMaxCallsStr, 10) : undefined;
-  const envTimeoutStr = process.env[`${envPrefix}_TIMEOUT_MS`];
+  const envTimeoutStr =
+    process.env[`${envPrefix}_TIMEOUT_MS`] || process.env.OVERWATCH_TIMEOUT_MS;
   const envTimeout = envTimeoutStr ? parseInt(envTimeoutStr, 10) : undefined;
 
   return {

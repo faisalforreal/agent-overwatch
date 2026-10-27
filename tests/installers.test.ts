@@ -61,7 +61,8 @@ describe('Client Installers Suite', () => {
     expect(Object.keys(mcpJson.mcpServers).filter((k) => k === APP_NAME).length).toBe(1);
 
     const rules = fs.readFileSync(paths.rulesPath!, 'utf-8');
-    const matches = rules.match(/BEGIN OVERWATCH RULES/g);
+    const rulePattern = new RegExp(`BEGIN ${APP_NAME.toUpperCase()} RULES`, 'g');
+    const matches = rules.match(rulePattern);
     expect(matches?.length).toBe(1);
   });
 
@@ -114,7 +115,7 @@ describe('Client Installers Suite', () => {
     const paths = getClientPaths('codex', tmpHome, tmpWs);
     expect(fs.existsSync(paths.mcpConfigPath!)).toBe(true);
     const toml = fs.readFileSync(paths.mcpConfigPath!, 'utf-8');
-    expect(toml).toContain('[mcp_servers.overwatch]');
+    expect(toml).toContain(`[mcp_servers.${APP_NAME}]`);
   });
 
   it('installs with useLocal flag pointing command to node and args to local bin', () => {

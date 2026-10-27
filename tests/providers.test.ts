@@ -3,6 +3,7 @@ import { parseOverwatchFeedback, formatFeedbackAsMarkdown } from '../src/prompts
 import { MockProvider } from '../src/providers/mock.js';
 import { ProviderRouter } from '../src/providers/router.js';
 import { resolveConfig } from '../src/config.js';
+import { APP_NAME } from '../src/constants.js';
 
 describe('Providers & Parser Layer', () => {
   it('parses clean JSON fences seamlessly', () => {
@@ -74,7 +75,8 @@ The plan completely ignores the database migrations.
     };
 
     const md = formatFeedbackAsMarkdown(fb);
-    expect(md).toContain('Overwatch Verdict: ✅ **APPROVED**');
+    const titleName = APP_NAME.charAt(0).toUpperCase() + APP_NAME.slice(1);
+    expect(md).toContain(`${titleName} Verdict: ✅ **APPROVED**`);
     expect(md).toContain('Cache queries');
     expect(md).toContain('Merge branch');
   });

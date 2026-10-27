@@ -5,6 +5,7 @@ import { ProgressNotificationSchema } from '@modelcontextprotocol/sdk/types.js';
 import { createOverwatchServer } from '../src/server.js';
 import { MockProvider } from '../src/providers/mock.js';
 import { resolveConfig } from '../src/config.js';
+import { TOOL_PLAN_CHECK } from '../src/constants.js';
 
 describe('MCP Server Progress Notifications & Keep-Alive Suite', () => {
   it('delivers notifications/progress when client passes progressToken', async () => {
@@ -31,7 +32,7 @@ describe('MCP Server Progress Notifications & Keep-Alive Suite', () => {
 
     // Call tool with progressToken in _meta
     const res = await client.callTool({
-      name: 'overwatch_plan_check',
+      name: TOOL_PLAN_CHECK,
       arguments: {
         user_goal: 'Implement token auth',
         proposed_plan: '1. Add jwt\n2. Add test',

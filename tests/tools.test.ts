@@ -14,6 +14,7 @@ import {
   executeStatus,
 } from '../src/tools/index.js';
 import { resetSessionCallCount } from '../src/budget/tracker.js';
+import { APP_NAME } from '../src/constants.js';
 
 describe('MCP Tools Implementation Suite', () => {
   const tmpRepo = path.join(os.tmpdir(), `overwatch-tools-test-${Date.now()}`);
@@ -42,7 +43,8 @@ describe('MCP Tools Implementation Suite', () => {
     );
 
     expect(res.feedback.verdict).toBe('APPROVED');
-    expect(res.markdown).toContain('Overwatch Verdict');
+    const title = APP_NAME.charAt(0).toUpperCase() + APP_NAME.slice(1);
+    expect(res.markdown).toContain(`${title} Verdict`);
     expect(res.markdown).toContain('APPROVED');
   });
 
@@ -107,6 +109,7 @@ describe('MCP Tools Implementation Suite', () => {
     expect(res.status.juniorModel).toBe(config.juniorModel);
     expect(res.status.tierValidation.valid).toBe(true);
     expect(res.status.sessionCalls).toBe(0);
-    expect(res.markdown).toContain('🛰️ Overwatch System Status');
+    const title = APP_NAME.charAt(0).toUpperCase() + APP_NAME.slice(1);
+    expect(res.markdown).toContain(`🛰️ ${title} System Status`);
   });
 });
