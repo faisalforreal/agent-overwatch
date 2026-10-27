@@ -49,12 +49,20 @@ export function createCli(): Command {
       // 2. Config & Keys
       const config = resolveConfig();
       console.log(`\nConfiguration (${getGlobalConfigPath()}):`);
-      console.log(`  - OpenRouter Key: ${maskApiKey(config.openrouterApiKey)}`);
-      console.log(`  - Anthropic Key:  ${maskApiKey(config.anthropicApiKey)}`);
-      console.log(`  - Gemini Key:     ${maskApiKey(config.geminiApiKey)}`);
-      console.log(`  - OpenAI Key:     ${maskApiKey(config.openaiApiKey)}`);
+      console.log(`  - OpenRouter Key:    ${maskApiKey(config.openrouterApiKey)}`);
+      console.log(`  - Anthropic Key:     ${maskApiKey(config.anthropicApiKey)}`);
+      console.log(`  - Gemini Key:        ${maskApiKey(config.geminiApiKey)}`);
+      console.log(`  - OpenAI Key:        ${maskApiKey(config.openaiApiKey)}`);
       if (config.openaiBaseUrl) {
-        console.log(`  - OpenAI Base URL: ${config.openaiBaseUrl}`);
+        console.log(`  - OpenAI Base URL:   ${config.openaiBaseUrl}`);
+      }
+      console.log(`  - Bedrock Key:       ${maskApiKey(config.bedrockApiKey)}`);
+      if (config.awsAccessKeyId) {
+        console.log(`  - AWS Access Key:    ${maskApiKey(config.awsAccessKeyId)} (${config.awsRegion || 'us-east-1'})`);
+      }
+      if (config.customBaseUrl) {
+        console.log(`  - Custom Base URL:   ${config.customBaseUrl}`);
+        console.log(`  - Custom API Key:    ${maskApiKey(config.customApiKey)}`);
       }
 
       // 3. Models & Tiers
@@ -173,6 +181,12 @@ export function createCli(): Command {
       );
       const gemini = await ask(`Gemini API Key [${maskApiKey(current.geminiApiKey)}]: `);
       const openai = await ask(`OpenAI API Key [${maskApiKey(current.openaiApiKey)}]: `);
+      const bedrock = await ask(`Amazon Bedrock API Key [${maskApiKey(current.bedrockApiKey)}]: `);
+      const customBaseUrl = await ask(`Custom / Local Base URL (e.g. http://localhost:11434/v1) [${current.customBaseUrl || 'none'}]: `);
+      let customApiKey = '';
+      if (customBaseUrl.trim() || current.customBaseUrl) {
+        customApiKey = await ask(`Custom Endpoint API Key [${maskApiKey(current.customApiKey)}]: `);
+      }
 
       const junior = await ask(
         `Junior model (execution worker) [${current.juniorModel}]: `
@@ -210,6 +224,11 @@ export function createCli(): Command {
       if (anthropic.trim()) newConfig.anthropicApiKey = anthropic.trim();
       if (gemini.trim()) newConfig.geminiApiKey = gemini.trim();
       if (openai.trim()) newConfig.openaiApiKey = openai.trim();
+      if (bedrock.trim()) newConfig.bedrockApiKey = bedrock.trim();
+      if (customBaseUrl.trim() && customBaseUrl.trim() !== 'none') {
+        newConfig.customBaseUrl = customBaseUrl.trim();
+      }
+      if (customApiKey.trim()) newConfig.customApiKey = customApiKey.trim();
 
       saveConfigFile(newConfig);
       console.log(`\n✅ Configuration saved to ${getGlobalConfigPath()}\n`);
