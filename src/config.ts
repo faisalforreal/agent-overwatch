@@ -14,15 +14,18 @@ import {
   LOG_PREFIX,
 } from './constants.js';
 import { getModelDefaults } from './tiers.js';
+import { ModelEntry } from './types.js';
 
 // Load .env if present in current working directory
 dotenv.config();
 
 export interface MentorConfig {
-  provider: 'anthropic' | 'gemini' | 'openai' | 'openrouter' | 'mock';
+  provider: 'anthropic' | 'gemini' | 'openai' | 'openrouter' | 'bedrock' | 'custom' | 'mock';
   model: string;
   apiKey?: string;
   baseUrl?: string;
+  region?: string;
+  headers?: Record<string, string>;
 }
 
 export interface OverwatchConfig {
@@ -31,6 +34,22 @@ export interface OverwatchConfig {
   geminiApiKey?: string;
   openaiApiKey?: string;
   openaiBaseUrl?: string;
+
+  // Amazon Bedrock
+  bedrockApiKey?: string;
+  awsAccessKeyId?: string;
+  awsSecretAccessKey?: string;
+  awsSessionToken?: string;
+  awsRegion?: string;
+  bedrockBaseUrl?: string;
+
+  // Generic custom OpenAI-compatible endpoint / custom model
+  customApiKey?: string;
+  customBaseUrl?: string;
+  customModel?: string;
+  customHeaders?: Record<string, string>;
+  customProtocol?: 'openai' | 'anthropic';
+  customModels?: ModelEntry[];
 
   juniorModel: string;
   mentorModel: string;
@@ -118,6 +137,41 @@ export function resolveConfig(
   const envOpenAI = process.env.OPENAI_API_KEY;
   const envOpenAIBaseUrl = process.env.OPENAI_BASE_URL;
 
+  // Bedrock env vars
+  const envBedrockApiKey =
+    process.env[`${envPrefix}_BEDROCK_API_KEY`] || process.env.BEDROCK_API_KEY;
+  const envAwsAccessKeyId =
+    process.env[`${envPrefix}_AWS_ACCESS_KEY_ID`] || process.env.AWS_ACCESS_KEY_ID;
+  const envAwsSecretAccessKey =
+    process.env[`${envPrefix}_AWS_SECRET_ACCESS_KEY`] || process.env.AWS_SECRET_ACCESS_KEY;
+  const envAwsSessionToken =
+    process.env[`${envPrefix}_AWS_SESSION_TOKEN`] || process.env.AWS_SESSION_TOKEN;
+  const envAwsRegion =
+    process.env[`${envPrefix}_AWS_REGION`] ||
+    process.env.AWS_REGION ||
+    process.env.AWS_DEFAULT_REGION;
+  const envBedrockBaseUrl =
+    process.env[`${envPrefix}_BEDROCK_BASE_URL`] || process.env.BEDROCK_BASE_URL;
+
+  // Custom endpoint env vars
+  const envCustomApiKey =
+    process.env[`${envPrefix}_CUSTOM_API_KEY`] || process.env.CUSTOM_API_KEY;
+  const envCustomBaseUrl =
+    process.env[`${envPrefix}_CUSTOM_BASE_URL`] || process.env.CUSTOM_BASE_URL;
+  const envCustomModel =
+    process.env[`${envPrefix}_CUSTOM_MODEL`] || process.env.CUSTOM_MODEL;
+  let parsedCustomHeaders: Record<string, string> | undefined;
+  const rawCustomHeaders =
+    process.env[`${envPrefix}_CUSTOM_HEADERS`] || process.env.CUSTOM_HEADERS;
+  if (rawCustomHeaders) {
+    try {
+      parsedCustomHeaders = JSON.parse(rawCustomHeaders);
+    } catch {}
+  }
+  const envCustomProtocol = (
+    process.env[`${envPrefix}_CUSTOM_PROTOCOL`] || process.env.CUSTOM_PROTOCOL
+  ) as 'openai' | 'anthropic' | undefined;
+
   const envJuniorModel = process.env[`${envPrefix}_JUNIOR_MODEL`];
   const envMentorModel = process.env[`${envPrefix}_MENTOR_MODEL`];
   const envMaxCallsStr = process.env[`${envPrefix}_MAX_CALLS`];
@@ -136,6 +190,34 @@ export function resolveConfig(
       overrides.openaiApiKey ?? envOpenAI ?? fileConfig.openaiApiKey,
     openaiBaseUrl:
       overrides.openaiBaseUrl ?? envOpenAIBaseUrl ?? fileConfig.openaiBaseUrl,
+
+    // Amazon Bedrock
+    bedrockApiKey:
+      overrides.bedrockApiKey ?? envBedrockApiKey ?? fileConfig.bedrockApiKey,
+    awsAccessKeyId:
+      overrides.awsAccessKeyId ?? envAwsAccessKeyId ?? fileConfig.awsAccessKeyId,
+    awsSecretAccessKey:
+      overrides.awsSecretAccessKey ?? envAwsSecretAccessKey ?? fileConfig.awsSecretAccessKey,
+    awsSessionToken:
+      overrides.awsSessionToken ?? envAwsSessionToken ?? fileConfig.awsSessionToken,
+    awsRegion:
+      overrides.awsRegion ?? envAwsRegion ?? fileConfig.awsRegion ?? 'us-east-1',
+    bedrockBaseUrl:
+      overrides.bedrockBaseUrl ?? envBedrockBaseUrl ?? fileConfig.bedrockBaseUrl,
+
+    // Generic Custom Endpoint
+    customApiKey:
+      overrides.customApiKey ?? envCustomApiKey ?? fileConfig.customApiKey,
+    customBaseUrl:
+      overrides.customBaseUrl ?? envCustomBaseUrl ?? fileConfig.customBaseUrl,
+    customModel:
+      overrides.customModel ?? envCustomModel ?? fileConfig.customModel,
+    customHeaders:
+      overrides.customHeaders ?? parsedCustomHeaders ?? fileConfig.customHeaders,
+    customProtocol:
+      overrides.customProtocol ?? envCustomProtocol ?? fileConfig.customProtocol ?? 'openai',
+    customModels:
+      overrides.customModels ?? fileConfig.customModels ?? [],
 
     juniorModel:
       overrides.juniorModel ??

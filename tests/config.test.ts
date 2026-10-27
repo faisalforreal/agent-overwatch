@@ -64,4 +64,22 @@ describe('Configuration Engine', () => {
 
     delete process.env.OVERWATCH_MENTOR_MODEL;
   });
+
+  it('resolves Bedrock and generic custom endpoint configuration', () => {
+    process.env.BEDROCK_API_KEY = 'bedrock-test-key-12345';
+    process.env.AWS_REGION = 'us-west-2';
+    process.env.CUSTOM_BASE_URL = 'http://localhost:11434/v1';
+    process.env.CUSTOM_API_KEY = 'ollama-no-key';
+
+    const cfg = resolveConfig({}, tmpConfigFile);
+    expect(cfg.bedrockApiKey).toBe('bedrock-test-key-12345');
+    expect(cfg.awsRegion).toBe('us-west-2');
+    expect(cfg.customBaseUrl).toBe('http://localhost:11434/v1');
+    expect(cfg.customApiKey).toBe('ollama-no-key');
+
+    delete process.env.BEDROCK_API_KEY;
+    delete process.env.AWS_REGION;
+    delete process.env.CUSTOM_BASE_URL;
+    delete process.env.CUSTOM_API_KEY;
+  });
 });
