@@ -4,5 +4,5 @@ dist/
 .env.*
 !.env.example
 *.log
-.overwatch/NOTES.md
-.overwatch/usage.json
+.overwatch/
+.agent-overwatch/
