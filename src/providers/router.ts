@@ -94,7 +94,7 @@ export class ProviderRouter {
     ) {
       const cleanModel = modelName.replace(/^anthropic\//, '');
       return {
-        provider: new AnthropicProvider(this.config.anthropicApiKey),
+        provider: new AnthropicProvider(this.config.anthropicApiKey, this.config.anthropicBaseUrl),
         model: cleanModel,
       };
     }
@@ -106,7 +106,7 @@ export class ProviderRouter {
     ) {
       const cleanModel = modelName.replace(/^google\//, '');
       return {
-        provider: new GeminiProvider(this.config.geminiApiKey),
+        provider: new GeminiProvider(this.config.geminiApiKey, this.config.geminiBaseUrl),
         model: cleanModel,
       };
     }
@@ -176,7 +176,7 @@ export class ProviderRouter {
         orModel = `openai/${modelName}`;
       }
       return {
-        provider: new OpenRouterProvider(this.config.openrouterApiKey),
+        provider: new OpenRouterProvider(this.config.openrouterApiKey, this.config.openrouterBaseUrl),
         model: orModel,
       };
     }
