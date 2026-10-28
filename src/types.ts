@@ -49,6 +49,7 @@ export type OverwatchFeedback = z.infer<typeof OverwatchFeedbackSchema>;
 export const OverwatchPlanCheckInputSchema = z.object({
   user_goal: z.string().describe('The primary task or prompt from the user'),
   proposed_plan: z.string().describe('The detailed plan drafted by the junior agent'),
+  mentor_provider: z.enum(['bedrock', 'anthropic', 'gemini', 'openai', 'openrouter', 'custom']).optional().describe('Optional per-call override for mentor provider'),
   repo_path: z.string().optional().describe('Absolute path to repository root for context gathering'),
   relevant_files: z.array(z.string()).optional().describe('List of relevant relative file paths suggested by junior agent'),
   architecture_context: z.string().optional().describe('Additional notes on framework, dependencies, or system constraints'),
@@ -65,6 +66,7 @@ export const OverwatchCheckpointInputSchema = z.object({
   }),
   repo_path: z.string().optional().describe('Absolute path to repository root for automatic diff and status check'),
   error_log: z.string().optional().describe('Compiler, test, or runtime error log'),
+  mentor_provider: z.enum(['bedrock', 'anthropic', 'gemini', 'openai', 'openrouter', 'custom']).optional().describe('Optional per-call override for mentor provider'),
   junior_model: z.string().optional().describe('Optional model identifier of the junior agent executing the turn'),
 });
 export type OverwatchCheckpointInput = z.infer<typeof OverwatchCheckpointInputSchema>;
@@ -76,6 +78,7 @@ export const OverwatchReviewInputSchema = z.object({
   file_context: z.string().optional().describe('Additional context or file snippets'),
   current_tests_or_errors: z.string().optional().describe('Test execution outputs or errors'),
   mentor_model: z.string().optional().describe('Optional per-call override for mentor model'),
+  mentor_provider: z.enum(['bedrock', 'anthropic', 'gemini', 'openai', 'openrouter', 'custom']).optional().describe('Optional per-call override for mentor provider'),
   junior_model: z.string().optional().describe('Optional model identifier of the junior agent executing the turn'),
 });
 export type OverwatchReviewInput = z.infer<typeof OverwatchReviewInputSchema>;
@@ -84,6 +87,7 @@ export const OverwatchQuickHintInputSchema = z.object({
   problem_description: z.string().describe('Brief description of where the agent is stuck'),
   error_or_log: z.string().describe('The exact error message, stack trace, or compiler error'),
   attempted_fix: z.string().optional().describe('What the junior agent tried and why it failed'),
+  mentor_provider: z.enum(['bedrock', 'anthropic', 'gemini', 'openai', 'openrouter', 'custom']).optional().describe('Optional per-call override for mentor provider'),
   repo_path: z.string().optional().describe('Absolute path to repository root for tracking and context'),
   junior_model: z.string().optional().describe('Optional model identifier of the junior agent executing the turn'),
 });
@@ -94,6 +98,7 @@ export const OverwatchVerifyInputSchema = z.object({
   repo_path: z.string().describe('Absolute path to repository root to inspect real git diff against base ref'),
   base_ref: z.string().optional().default('HEAD~1').describe('Git base reference to diff against (e.g. main, HEAD~1)'),
   test_results: z.string().optional().describe('Console output of test suite execution'),
+  mentor_provider: z.enum(['bedrock', 'anthropic', 'gemini', 'openai', 'openrouter', 'custom']).optional().describe('Optional per-call override for mentor provider'),
   junior_model: z.string().optional().describe('Optional model identifier of the junior agent executing the turn'),
 });
 export type OverwatchVerifyInput = z.infer<typeof OverwatchVerifyInputSchema>;
