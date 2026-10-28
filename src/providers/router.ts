@@ -28,7 +28,7 @@ export class ProviderRouter {
     }
   }
 
-  public resolveProviderForModel(modelName: string): RouteResolution {
+  public resolveProviderForModel(modelName: string, requestedProvider?: string): RouteResolution {
     if (this.mockProvider || process.env.OVERWATCH_MOCK_PROVIDER === 'true') {
       return {
         provider: this.mockProvider || new MockProvider(),
@@ -37,18 +37,100 @@ export class ProviderRouter {
     }
 
     const m = modelName.toLowerCase();
+    const explicitProvider = requestedProvider || this.config.mentorProvider;
 
-    // 1. Amazon Bedrock explicit model or prefix
     const hasBedrockAuth =
       Boolean(this.config.bedrockApiKey) ||
       Boolean(this.config.awsAccessKeyId && this.config.awsSecretAccessKey);
-    if (
-      hasBedrockAuth &&
-      (m.startsWith('bedrock/') ||
-        m.startsWith('amazon.') ||
-        m.startsWith('anthropic.claude') ||
-        m.startsWith('meta.llama'))
-    ) {
+
+    // 1. Explicit Provider (via config.mentorProvider or per-call requestedProvider)
+    if (explicitProvider) {
+      const p = explicitProvider.toLowerCase();
+      if (p === 'bedrock') {
+        let cleanModel = modelName.replace(/^bedrock\//, '');
+        if (m.includes('claude')) {
+          cleanModel = m.includes('3-7-sonnet')
+            ? 'anthropic.claude-3-7-sonnet-20250219-v1:0'
+            : m.includes('3-5-sonnet')
+              ? 'anthropic.claude-3-5-sonnet-20241022-v2:0'
+              : m.includes('opus')
+                ? 'anthropic.claude-3-opus-20240229-v1:0'
+                : cleanModel.startsWith('anthropic.') || cleanModel.startsWith('us.') || cleanModel.startsWith('eu.')
+                  ? cleanModel
+                  : 'anthropic.claude-3-7-sonnet-20250219-v1:0';
+        }
+        return {
+          provider: new BedrockProvider({
+            apiKey: this.config.bedrockApiKey,
+            accessKeyId: this.config.awsAccessKeyId,
+            secretAccessKey: this.config.awsSecretAccessKey,
+            sessionToken: this.config.awsSessionToken,
+            region: this.config.awsRegion,
+            baseUrl: this.config.bedrockBaseUrl,
+            defaultModel: cleanModel,
+          }),
+          model: cleanModel,
+        };
+      }
+
+      if (p === 'anthropic') {
+        const cleanModel = modelName.replace(/^anthropic\//, '');
+        return {
+          provider: new AnthropicProvider(this.config.anthropicApiKey || '', this.config.anthropicBaseUrl),
+          model: cleanModel,
+        };
+      }
+
+      if (p === 'gemini') {
+        const cleanModel = modelName.replace(/^(google|gemini)\//, '');
+        return {
+          provider: new GeminiProvider(this.config.geminiApiKey || '', this.config.geminiBaseUrl),
+          model: cleanModel,
+        };
+      }
+
+      if (p === 'openai') {
+        const cleanModel = modelName.replace(/^openai\//, '');
+        return {
+          provider: new OpenAIProvider(
+            this.config.openaiApiKey || 'no-key-required',
+            this.config.openaiBaseUrl
+          ),
+          model: cleanModel,
+        };
+      }
+
+      if (p === 'openrouter') {
+        let orModel = modelName.replace(/^openrouter\//, '');
+        if (m.includes('opus') && !orModel.includes('/')) {
+          orModel = `anthropic/${orModel}`;
+        } else if (m.includes('gemini') && !orModel.includes('/')) {
+          orModel = `google/${orModel}`;
+        } else if ((m.startsWith('o3') || m.startsWith('o1')) && !orModel.includes('/')) {
+          orModel = `openai/${orModel}`;
+        }
+        return {
+          provider: new OpenRouterProvider(this.config.openrouterApiKey || '', this.config.openrouterBaseUrl),
+          model: orModel,
+        };
+      }
+
+      if (p === 'custom') {
+        const cleanModel = modelName.replace(/^(custom|local|ollama)\//, '');
+        return {
+          provider: new CustomProvider({
+            baseUrl: this.config.customBaseUrl || 'http://localhost:11434/v1',
+            apiKey: this.config.customApiKey,
+            customHeaders: this.config.customHeaders,
+            defaultModel: cleanModel,
+          }),
+          model: cleanModel,
+        };
+      }
+    }
+
+    // 2. Explicit Provider Prefix in Model Name
+    if (m.startsWith('bedrock/')) {
       const cleanModel = modelName.replace(/^bedrock\//, '');
       return {
         provider: new BedrockProvider({
@@ -64,20 +146,35 @@ export class ProviderRouter {
       };
     }
 
-    // 2. Custom endpoint explicit prefix (custom/..., local/..., ollama/...)
-    if (
-      m.startsWith('custom/') ||
-      m.startsWith('local/') ||
-      m.startsWith('ollama/')
-    ) {
+    if (m.startsWith('openrouter/')) {
+      const cleanModel = modelName.replace(/^openrouter\//, '');
+      return {
+        provider: new OpenRouterProvider(this.config.openrouterApiKey || '', this.config.openrouterBaseUrl),
+        model: cleanModel,
+      };
+    }
+
+    if (m.startsWith('anthropic/')) {
+      const cleanModel = modelName.replace(/^anthropic\//, '');
+      return {
+        provider: new AnthropicProvider(this.config.anthropicApiKey || '', this.config.anthropicBaseUrl),
+        model: cleanModel,
+      };
+    }
+
+    if (m.startsWith('google/') || m.startsWith('gemini/')) {
+      const cleanModel = modelName.replace(/^(google|gemini)\//, '');
+      return {
+        provider: new GeminiProvider(this.config.geminiApiKey || '', this.config.geminiBaseUrl),
+        model: cleanModel,
+      };
+    }
+
+    if (m.startsWith('custom/') || m.startsWith('local/') || m.startsWith('ollama/')) {
       const cleanModel = modelName.replace(/^(custom|local|ollama)\//, '');
-      const baseUrl =
-        this.config.customBaseUrl ||
-        this.config.openaiBaseUrl ||
-        'http://localhost:11434/v1';
       return {
         provider: new CustomProvider({
-          baseUrl,
+          baseUrl: this.config.customBaseUrl || 'http://localhost:11434/v1',
           apiKey: this.config.customApiKey || this.config.openaiApiKey,
           customHeaders: this.config.customHeaders,
           defaultModel: cleanModel,
@@ -87,40 +184,7 @@ export class ProviderRouter {
       };
     }
 
-    // 3. Direct Anthropic
-    if (
-      this.config.anthropicApiKey &&
-      (m.includes('claude') || m.startsWith('anthropic/'))
-    ) {
-      const cleanModel = modelName.replace(/^anthropic\//, '');
-      return {
-        provider: new AnthropicProvider(this.config.anthropicApiKey, this.config.anthropicBaseUrl),
-        model: cleanModel,
-      };
-    }
-
-    // 4. Direct Gemini
-    if (
-      this.config.geminiApiKey &&
-      (m.includes('gemini') || m.startsWith('google/'))
-    ) {
-      const cleanModel = modelName.replace(/^google\//, '');
-      return {
-        provider: new GeminiProvider(this.config.geminiApiKey, this.config.geminiBaseUrl),
-        model: cleanModel,
-      };
-    }
-
-    // 5. Direct OpenAI or custom OpenAI endpoint
-    // If openaiBaseUrl is set, allow ANY model to be routed through it (e.g. Ollama, Groq, DeepSeek, local vLLM)
-    if (
-      (this.config.openaiApiKey || this.config.openaiBaseUrl) &&
-      (this.config.openaiBaseUrl ||
-        m.startsWith('o1') ||
-        m.startsWith('o3') ||
-        m.includes('gpt-') ||
-        m.startsWith('openai/'))
-    ) {
+    if (m.startsWith('openai/')) {
       const cleanModel = modelName.replace(/^openai\//, '');
       return {
         provider: new OpenAIProvider(
@@ -131,26 +195,67 @@ export class ProviderRouter {
       };
     }
 
-    // 6. Generic Custom endpoint configured via customBaseUrl (accepts ANY model)
-    if (this.config.customBaseUrl) {
+    // 3. Amazon Bedrock specific model IDs (e.g. amazon.*, anthropic.claude*, us.anthropic.*, eu.anthropic.*, meta.llama*)
+    if (
+      hasBedrockAuth &&
+      (m.startsWith('amazon.') ||
+        m.startsWith('anthropic.claude') ||
+        m.startsWith('us.anthropic.') ||
+        m.startsWith('eu.anthropic.') ||
+        m.startsWith('meta.llama'))
+    ) {
       return {
-        provider: new CustomProvider({
-          baseUrl: this.config.customBaseUrl,
-          apiKey: this.config.customApiKey,
-          customHeaders: this.config.customHeaders,
+        provider: new BedrockProvider({
+          apiKey: this.config.bedrockApiKey,
+          accessKeyId: this.config.awsAccessKeyId,
+          secretAccessKey: this.config.awsSecretAccessKey,
+          sessionToken: this.config.awsSessionToken,
+          region: this.config.awsRegion,
+          baseUrl: this.config.bedrockBaseUrl,
           defaultModel: modelName,
         }),
         model: modelName,
       };
     }
 
+    // 4. Direct Anthropic
+    if (this.config.anthropicApiKey && m.includes('claude')) {
+      return {
+        provider: new AnthropicProvider(this.config.anthropicApiKey, this.config.anthropicBaseUrl),
+        model: modelName,
+      };
+    }
+
+    // 5. Direct Gemini
+    if (this.config.geminiApiKey && m.includes('gemini')) {
+      return {
+        provider: new GeminiProvider(this.config.geminiApiKey, this.config.geminiBaseUrl),
+        model: modelName,
+      };
+    }
+
+    // 6. Direct OpenAI
+    const isOpenAiModel = m.startsWith('o1') || m.startsWith('o3') || m.includes('gpt-');
+    if ((this.config.openaiApiKey || this.config.openaiBaseUrl) && isOpenAiModel) {
+      return {
+        provider: new OpenAIProvider(
+          this.config.openaiApiKey || 'no-key-required',
+          this.config.openaiBaseUrl
+        ),
+        model: modelName,
+      };
+    }
+
     // 7. Amazon Bedrock for Claude if Bedrock keys exist and direct Anthropic key does not
     if (hasBedrockAuth && m.includes('claude')) {
-      const bedrockClaudeModel = m.includes('3-5-sonnet')
-        ? 'anthropic.claude-3-5-sonnet-20241022-v2:0'
-        : m.includes('opus')
-          ? 'anthropic.claude-3-opus-20240229-v1:0'
-          : 'anthropic.claude-3-5-sonnet-20241022-v2:0';
+      const bedrockClaudeModel =
+        m.includes('3-7-sonnet')
+          ? 'anthropic.claude-3-7-sonnet-20250219-v1:0'
+          : m.includes('3-5-sonnet')
+            ? 'anthropic.claude-3-5-sonnet-20241022-v2:0'
+            : m.includes('opus')
+              ? 'anthropic.claude-3-opus-20240229-v1:0'
+              : 'anthropic.claude-3-7-sonnet-20250219-v1:0';
       return {
         provider: new BedrockProvider({
           apiKey: this.config.bedrockApiKey,
@@ -165,12 +270,25 @@ export class ProviderRouter {
       };
     }
 
-    // 8. OpenRouter (can route any model name including anthropic/..., google/..., fable-...)
+    // 8. Custom Base URL (handles non-vendor models like llama3.3:70b when customBaseUrl is set)
+    if (this.config.customBaseUrl) {
+      return {
+        provider: new CustomProvider({
+          baseUrl: this.config.customBaseUrl,
+          apiKey: this.config.customApiKey,
+          customHeaders: this.config.customHeaders,
+          defaultModel: modelName,
+        }),
+        model: modelName,
+      };
+    }
+
+    // 9. OpenRouter (can route any model name including anthropic/..., google/..., fable-...)
     if (this.config.openrouterApiKey) {
       let orModel = modelName;
-      if (m.includes('opus') && !m.includes('/')) {
+      if (m.includes('opus') && !orModel.includes('/')) {
         orModel = `anthropic/${modelName}`;
-      } else if (m.includes('gemini') && !m.includes('/')) {
+      } else if (m.includes('gemini') && !orModel.includes('/')) {
         orModel = `google/${modelName}`;
       } else if (m.startsWith('o3') || m.startsWith('o1')) {
         orModel = `openai/${modelName}`;
@@ -181,17 +299,17 @@ export class ProviderRouter {
       };
     }
 
-    // 9. Fallback to any available direct provider using seed defaults
+    // 10. Fallback to any available direct provider using seed defaults
     const providerDefaults = getModelDefaults().providerDefaults || {};
     if (this.config.anthropicApiKey) {
       return {
-        provider: new AnthropicProvider(this.config.anthropicApiKey),
+        provider: new AnthropicProvider(this.config.anthropicApiKey, this.config.anthropicBaseUrl),
         model: providerDefaults.anthropic || 'claude-3-opus-20240229',
       };
     }
     if (this.config.geminiApiKey) {
       return {
-        provider: new GeminiProvider(this.config.geminiApiKey),
+        provider: new GeminiProvider(this.config.geminiApiKey, this.config.geminiBaseUrl),
         model: providerDefaults.gemini || 'gemini-2.0-pro-exp-02-05',
       };
     }
@@ -214,18 +332,7 @@ export class ProviderRouter {
           region: this.config.awsRegion,
           baseUrl: this.config.bedrockBaseUrl,
         }),
-        model: 'anthropic.claude-3-5-sonnet-20241022-v2:0',
-      };
-    }
-    if (this.config.customBaseUrl) {
-      return {
-        provider: new CustomProvider({
-          baseUrl: this.config.customBaseUrl,
-          apiKey: this.config.customApiKey,
-          customHeaders: this.config.customHeaders,
-          defaultModel: modelName,
-        }),
-        model: modelName,
+        model: 'anthropic.claude-3-7-sonnet-20250219-v1:0',
       };
     }
 
@@ -247,17 +354,25 @@ export class ProviderRouter {
   }
 
   public async executeReviewWithFallbacks(
-    options: Omit<ProviderRequestOptions, 'model'> & { model?: string }
+    options: Omit<ProviderRequestOptions, 'model'> & {
+      model?: string;
+      mentorProvider?: string;
+    }
   ): Promise<OverwatchFeedback> {
     const primaryModel = options.model || this.config.mentorModel;
-    const candidateConfigs: Array<{ model: string; providerOverride?: MentorProvider }> = [
-      { model: primaryModel },
-    ];
+    const candidateConfigs: Array<{
+      model: string;
+      providerOverride?: MentorProvider;
+      mentorProvider?: string;
+    }> = [{ model: primaryModel, mentorProvider: options.mentorProvider || this.config.mentorProvider }];
 
     // Add configured mentor fallbacks
     if (this.config.mentorFallbacks && this.config.mentorFallbacks.length > 0) {
       for (const fb of this.config.mentorFallbacks) {
-        candidateConfigs.push({ model: fb.model });
+        candidateConfigs.push({
+          model: fb.model,
+          mentorProvider: fb.provider,
+        });
       }
     }
 
@@ -267,7 +382,7 @@ export class ProviderRouter {
       try {
         const { provider, model } = candidate.providerOverride
           ? { provider: candidate.providerOverride, model: candidate.model }
-          : this.resolveProviderForModel(candidate.model);
+          : this.resolveProviderForModel(candidate.model, candidate.mentorProvider);
 
         const result = await provider.generate({
           ...options,
