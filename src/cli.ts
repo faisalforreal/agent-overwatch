@@ -49,9 +49,21 @@ export function createCli(): Command {
       // 2. Config & Keys
       const config = resolveConfig();
       console.log(`\nConfiguration (${getGlobalConfigPath()}):`);
+      console.log(`  - Mentor Provider:   ${config.mentorProvider || '(auto-detected from key/model)'}`);
+      console.log(`  - Mentor Model:      ${config.mentorModel}`);
+      console.log(`  - Junior Model:      ${config.juniorModel === 'auto' ? 'auto (dynamic from IDE)' : config.juniorModel}`);
       console.log(`  - OpenRouter Key:    ${maskApiKey(config.openrouterApiKey)}`);
+      if (config.openrouterBaseUrl) {
+        console.log(`  - OpenRouter Base:   ${config.openrouterBaseUrl}`);
+      }
       console.log(`  - Anthropic Key:     ${maskApiKey(config.anthropicApiKey)}`);
+      if (config.anthropicBaseUrl) {
+        console.log(`  - Anthropic Base:    ${config.anthropicBaseUrl}`);
+      }
       console.log(`  - Gemini Key:        ${maskApiKey(config.geminiApiKey)}`);
+      if (config.geminiBaseUrl) {
+        console.log(`  - Gemini Base URL:   ${config.geminiBaseUrl}`);
+      }
       console.log(`  - OpenAI Key:        ${maskApiKey(config.openaiApiKey)}`);
       if (config.openaiBaseUrl) {
         console.log(`  - OpenAI Base URL:   ${config.openaiBaseUrl}`);
@@ -60,6 +72,9 @@ export function createCli(): Command {
       if (config.awsAccessKeyId) {
         console.log(`  - AWS Access Key:    ${maskApiKey(config.awsAccessKeyId)} (${config.awsRegion || 'us-east-1'})`);
       }
+      if (config.bedrockBaseUrl) {
+        console.log(`  - Bedrock Base URL:  ${config.bedrockBaseUrl}`);
+      }
       if (config.customBaseUrl) {
         console.log(`  - Custom Base URL:   ${config.customBaseUrl}`);
         console.log(`  - Custom API Key:    ${maskApiKey(config.customApiKey)}`);
@@ -67,13 +82,17 @@ export function createCli(): Command {
 
       // 3. Models & Tiers
       console.log(`\nModel Tier Validation:`);
-      console.log(`  - Junior Model: ${config.juniorModel}`);
+      console.log(`  - Junior Model: ${config.juniorModel === 'auto' ? 'auto (dynamic from active agent)' : config.juniorModel}`);
       console.log(`  - Mentor Model: ${config.mentorModel}`);
       const tierRes = validateMentorSuperiority(config.mentorModel, config.juniorModel);
       console.log(`  - Junior Tier:  ${tierRes.juniorTier}`);
       console.log(`  - Mentor Tier:  ${tierRes.mentorTier}`);
       if (tierRes.valid) {
-        console.log(`  - Status:       ✅ VALID (Mentor is strictly stronger)`);
+        if (config.juniorModel === 'auto') {
+          console.log(`  - Status:       ✅ VALID (Dynamic runtime validation per tool call)`);
+        } else {
+          console.log(`  - Status:       ✅ VALID (Mentor is strictly stronger)`);
+        }
       } else {
         console.log(`  - Status:       🚨 INVALID: ${tierRes.warning}`);
       }
@@ -174,66 +193,105 @@ export function createCli(): Command {
 
       const current = resolveConfig();
       console.log(`\n🛠️  --- ${APP_NAME.toUpperCase()} CONFIGURATION WIZARD --- 🛠️\n`);
+      console.log('Select your primary Mentor Provider:');
+      console.log('  1) Amazon Bedrock (bedrock)');
+      console.log('  2) Anthropic (anthropic)');
+      console.log('  3) Google Gemini (gemini)');
+      console.log('  4) OpenAI (openai)');
+      console.log('  5) OpenRouter (openrouter)');
+      console.log('  6) Custom / Local (custom)');
 
-      const openrouter = await ask(
-        `OpenRouter API Key [${maskApiKey(current.openrouterApiKey)}]: `
-      );
-      const anthropic = await ask(
-        `Anthropic API Key [${maskApiKey(current.anthropicApiKey)}]: `
-      );
-      const gemini = await ask(`Gemini API Key [${maskApiKey(current.geminiApiKey)}]: `);
-      const openai = await ask(`OpenAI API Key [${maskApiKey(current.openaiApiKey)}]: `);
-      const bedrock = await ask(`Amazon Bedrock API Key [${maskApiKey(current.bedrockApiKey)}]: `);
-      const customBaseUrl = await ask(`Custom / Local Base URL (e.g. http://localhost:11434/v1) [${current.customBaseUrl || 'none'}]: `);
-      let customApiKey = '';
-      if (customBaseUrl.trim() || current.customBaseUrl) {
-        customApiKey = await ask(`Custom Endpoint API Key [${maskApiKey(current.customApiKey)}]: `);
-      }
-
-      const junior = await ask(
-        `Junior model (execution worker) [${current.juniorModel}]: `
-      );
-      const mentor = await ask(
-        `Mentor model (senior steering architect) [${current.mentorModel}]: `
-      );
-
-      const updatedJunior = junior.trim() || current.juniorModel;
-      const updatedMentor = mentor.trim() || current.mentorModel;
-
-      // Tier check
-      const tierRes = validateMentorSuperiority(updatedMentor, updatedJunior, {
-        allowSameTier: current.allowSameTier,
-      });
-      let allowOverride = false;
-      if (!tierRes.valid) {
-        console.log(`\n⚠️  WARNING: ${tierRes.warning}`);
-        const confirm = await ask(`Do you wish to keep this configuration anyway (force override)? (y/N): `);
-        if (confirm.toLowerCase() !== 'y') {
-          console.log(`Configuration aborted.`);
-          rl.close();
-          return;
-        }
-        allowOverride = true;
-      }
+      const providerChoice = await ask(`\nProvider [${current.mentorProvider || '1'}]: `);
+      let provider: 'bedrock' | 'anthropic' | 'gemini' | 'openai' | 'openrouter' | 'custom' = current.mentorProvider || 'bedrock';
+      const pRaw = providerChoice.trim().toLowerCase();
+      if (pRaw === '1' || pRaw === 'bedrock') provider = 'bedrock';
+      else if (pRaw === '2' || pRaw === 'anthropic') provider = 'anthropic';
+      else if (pRaw === '3' || pRaw === 'gemini') provider = 'gemini';
+      else if (pRaw === '4' || pRaw === 'openai') provider = 'openai';
+      else if (pRaw === '5' || pRaw === 'openrouter') provider = 'openrouter';
+      else if (pRaw === '6' || pRaw === 'custom') provider = 'custom';
 
       const newConfig: Partial<OverwatchConfig> = {
-        juniorModel: updatedJunior,
-        mentorModel: updatedMentor,
-        allowSameTier: allowOverride || current.allowSameTier,
+        mentorProvider: provider,
       };
 
-      if (openrouter.trim()) newConfig.openrouterApiKey = openrouter.trim();
-      if (anthropic.trim()) newConfig.anthropicApiKey = anthropic.trim();
-      if (gemini.trim()) newConfig.geminiApiKey = gemini.trim();
-      if (openai.trim()) newConfig.openaiApiKey = openai.trim();
-      if (bedrock.trim()) newConfig.bedrockApiKey = bedrock.trim();
-      if (customBaseUrl.trim() && customBaseUrl.trim() !== 'none') {
-        newConfig.customBaseUrl = customBaseUrl.trim();
+      if (provider === 'bedrock') {
+        const key = await ask(`Bedrock API Key / Bearer Token [${maskApiKey(current.bedrockApiKey)}]: `);
+        if (key.trim()) newConfig.bedrockApiKey = key.trim();
+
+        if (!newConfig.bedrockApiKey && !current.bedrockApiKey) {
+          const awsKey = await ask(`AWS Access Key ID [${maskApiKey(current.awsAccessKeyId)}]: `);
+          if (awsKey.trim()) newConfig.awsAccessKeyId = awsKey.trim();
+          const awsSec = await ask(`AWS Secret Access Key [${maskApiKey(current.awsSecretAccessKey)}]: `);
+          if (awsSec.trim()) newConfig.awsSecretAccessKey = awsSec.trim();
+        }
+        const region = await ask(`AWS Region [${current.awsRegion || 'us-east-1'}]: `);
+        if (region.trim()) newConfig.awsRegion = region.trim();
+
+        const defaultModel =
+          current.mentorModel && (current.mentorModel.includes('bedrock') || current.mentorModel.includes('claude') || current.mentorModel.includes('anthropic.'))
+            ? current.mentorModel
+            : 'anthropic.claude-3-7-sonnet-20250219-v1:0';
+        const mentor = await ask(`Mentor Model [${defaultModel}]: `);
+        newConfig.mentorModel = mentor.trim() || defaultModel;
+      } else if (provider === 'anthropic') {
+        const key = await ask(`Anthropic API Key [${maskApiKey(current.anthropicApiKey)}]: `);
+        if (key.trim()) newConfig.anthropicApiKey = key.trim();
+        const defaultModel = current.mentorModel && current.mentorModel.startsWith('claude') ? current.mentorModel : 'claude-3-7-sonnet-20250219';
+        const mentor = await ask(`Mentor Model [${defaultModel}]: `);
+        newConfig.mentorModel = mentor.trim() || defaultModel;
+      } else if (provider === 'gemini') {
+        const key = await ask(`Gemini API Key [${maskApiKey(current.geminiApiKey)}]: `);
+        if (key.trim()) newConfig.geminiApiKey = key.trim();
+        const defaultModel = current.mentorModel && current.mentorModel.startsWith('gemini') ? current.mentorModel : 'gemini-2.5-pro';
+        const mentor = await ask(`Mentor Model [${defaultModel}]: `);
+        newConfig.mentorModel = mentor.trim() || defaultModel;
+      } else if (provider === 'openai') {
+        const key = await ask(`OpenAI API Key [${maskApiKey(current.openaiApiKey)}]: `);
+        if (key.trim()) newConfig.openaiApiKey = key.trim();
+        const defaultModel = current.mentorModel && (current.mentorModel.startsWith('o') || current.mentorModel.startsWith('gpt')) ? current.mentorModel : 'o3-mini';
+        const mentor = await ask(`Mentor Model [${defaultModel}]: `);
+        newConfig.mentorModel = mentor.trim() || defaultModel;
+      } else if (provider === 'openrouter') {
+        const key = await ask(`OpenRouter API Key [${maskApiKey(current.openrouterApiKey)}]: `);
+        if (key.trim()) newConfig.openrouterApiKey = key.trim();
+        const defaultModel = current.mentorModel && current.mentorModel.includes('/') ? current.mentorModel : 'anthropic/claude-3.7-sonnet';
+        const mentor = await ask(`Mentor Model [${defaultModel}]: `);
+        newConfig.mentorModel = mentor.trim() || defaultModel;
+      } else if (provider === 'custom') {
+        const baseUrl = await ask(`Custom Base URL [${current.customBaseUrl || 'http://localhost:11434/v1'}]: `);
+        newConfig.customBaseUrl = baseUrl.trim() || current.customBaseUrl || 'http://localhost:11434/v1';
+        const key = await ask(`Custom API Key (optional) [${maskApiKey(current.customApiKey)}]: `);
+        if (key.trim()) newConfig.customApiKey = key.trim();
+        const mentor = await ask(`Mentor Model [${current.mentorModel}]: `);
+        newConfig.mentorModel = mentor.trim() || current.mentorModel;
       }
-      if (customApiKey.trim()) newConfig.customApiKey = customApiKey.trim();
+
+      // Junior model: defaults to 'auto' to let active IDE agent govern
+      const defaultJunior = current.juniorModel || 'auto';
+      const junior = await ask(`Junior model (worker agent in IDE; press Enter for '${defaultJunior}') [${defaultJunior}]: `);
+      const updatedJunior = junior.trim() || defaultJunior;
+      newConfig.juniorModel = updatedJunior;
+
+      if (updatedJunior !== 'auto') {
+        const tierRes = validateMentorSuperiority(newConfig.mentorModel!, updatedJunior, {
+          allowSameTier: current.allowSameTier,
+        });
+        if (!tierRes.valid) {
+          console.log(`\n⚠️  WARNING: ${tierRes.warning}`);
+          const confirm = await ask(`Do you wish to keep this configuration anyway (force override)? (y/N): `);
+          if (confirm.toLowerCase() !== 'y') {
+            console.log(`Configuration aborted.`);
+            rl.close();
+            return;
+          }
+          newConfig.allowSameTier = true;
+        }
+      }
 
       saveConfigFile(newConfig);
-      console.log(`\n✅ Configuration saved to ${getGlobalConfigPath()}\n`);
+      console.log(`\n✅ Configuration saved to ${getGlobalConfigPath()}`);
+      console.log(`Active Mentor: ${newConfig.mentorModel} via ${newConfig.mentorProvider}\n`);
       rl.close();
     });
 
