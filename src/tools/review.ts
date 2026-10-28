@@ -69,6 +69,7 @@ export async function executeReview(
   if (onProgress) onProgress(25, 100, 'Submitting diff to mentor model for audit...');
 
   const feedback = await router.executeReviewWithFallbacks({
+    mentorProvider: input.mentor_provider,
     systemPrompt: OVERWATCH_SYSTEM_PROMPT,
     userPrompt: prompt,
     notesContext: notes,

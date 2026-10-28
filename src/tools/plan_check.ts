@@ -49,6 +49,7 @@ export async function executePlanCheck(
   if (onProgress) onProgress(20, 100, 'Submitting plan to mentor model for architectural check...');
 
   const feedback = await router.executeReviewWithFallbacks({
+    mentorProvider: input.mentor_provider,
     systemPrompt: OVERWATCH_SYSTEM_PROMPT,
     userPrompt: prompt,
     notesContext: notes,

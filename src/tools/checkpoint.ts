@@ -47,6 +47,7 @@ export async function executeCheckpoint(
   if (onProgress) onProgress(20, 100, 'Connecting to mentor for milestone steering...');
 
   const feedback = await router.executeReviewWithFallbacks({
+    mentorProvider: input.mentor_provider,
     systemPrompt: OVERWATCH_SYSTEM_PROMPT,
     userPrompt: prompt,
     notesContext: notes,
