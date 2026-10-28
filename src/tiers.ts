@@ -192,7 +192,7 @@ export function compareTiers(tierA: ModelTier, tierB: ModelTier): number {
 export interface TierValidationResult {
   valid: boolean;
   mentorTier: ModelTier;
-  juniorTier: ModelTier;
+  juniorTier: ModelTier | 'auto';
   mentorOrdinal: number;
   juniorOrdinal: number;
   mentorIsUnknown: boolean;
@@ -203,7 +203,7 @@ export interface TierValidationResult {
 
 export function validateMentorSuperiority(
   mentorModel: string,
-  juniorModel: string,
+  juniorModel?: string,
   options: {
     customModelsPath?: string;
     allowSameTier?: boolean;
@@ -211,6 +211,19 @@ export function validateMentorSuperiority(
   } = {}
 ): TierValidationResult {
   const mentorMatch = getModelTier(mentorModel, options.customModelsPath, options.customModels);
+
+  if (!juniorModel || juniorModel === 'auto' || juniorModel === 'unknown') {
+    return {
+      valid: true,
+      mentorTier: mentorMatch.tier,
+      juniorTier: 'auto',
+      mentorOrdinal: mentorMatch.ordinal,
+      juniorOrdinal: 0,
+      mentorIsUnknown: mentorMatch.isUnknown,
+      juniorIsUnknown: false,
+      isIntraTier: false,
+    };
+  }
   const juniorMatch = getModelTier(juniorModel, options.customModelsPath, options.customModels);
 
   const tierDiff = compareTiers(mentorMatch.tier, juniorMatch.tier);
