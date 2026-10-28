@@ -34,6 +34,9 @@ export interface OverwatchConfig {
   geminiApiKey?: string;
   openaiApiKey?: string;
   openaiBaseUrl?: string;
+  anthropicBaseUrl?: string;
+  geminiBaseUrl?: string;
+  openrouterBaseUrl?: string;
 
   // Amazon Bedrock
   bedrockApiKey?: string;
@@ -136,6 +139,12 @@ export function resolveConfig(
   const envGemini = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   const envOpenAI = process.env.OPENAI_API_KEY;
   const envOpenAIBaseUrl = process.env.OPENAI_BASE_URL;
+  const envAnthropicBaseUrl =
+    process.env[`${envPrefix}_ANTHROPIC_BASE_URL`] || process.env.ANTHROPIC_BASE_URL;
+  const envGeminiBaseUrl =
+    process.env[`${envPrefix}_GEMINI_BASE_URL`] || process.env.GEMINI_BASE_URL;
+  const envOpenRouterBaseUrl =
+    process.env[`${envPrefix}_OPENROUTER_BASE_URL`] || process.env.OPENROUTER_BASE_URL;
 
   // Bedrock env vars
   const envBedrockApiKey =
@@ -206,6 +215,12 @@ export function resolveConfig(
       overrides.openaiApiKey ?? envOpenAI ?? fileConfig.openaiApiKey,
     openaiBaseUrl:
       overrides.openaiBaseUrl ?? envOpenAIBaseUrl ?? fileConfig.openaiBaseUrl,
+    anthropicBaseUrl:
+      overrides.anthropicBaseUrl ?? envAnthropicBaseUrl ?? fileConfig.anthropicBaseUrl,
+    geminiBaseUrl:
+      overrides.geminiBaseUrl ?? envGeminiBaseUrl ?? fileConfig.geminiBaseUrl,
+    openrouterBaseUrl:
+      overrides.openrouterBaseUrl ?? envOpenRouterBaseUrl ?? fileConfig.openrouterBaseUrl,
 
     // Amazon Bedrock
     bedrockApiKey:
