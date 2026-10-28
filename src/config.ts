@@ -55,6 +55,7 @@ export interface OverwatchConfig {
   customModels?: ModelEntry[];
 
   juniorModel?: string;
+  mentorProvider?: 'bedrock' | 'anthropic' | 'gemini' | 'openai' | 'openrouter' | 'custom';
   mentorModel: string;
   mentorFallbacks: MentorConfig[];
 
@@ -195,6 +196,11 @@ export function resolveConfig(
 
   const envJuniorModel =
     process.env[`${envPrefix}_JUNIOR_MODEL`] || process.env.OVERWATCH_JUNIOR_MODEL;
+  const envMentorProvider = (
+    process.env[`${envPrefix}_MENTOR_PROVIDER`] ||
+    process.env.OVERWATCH_MENTOR_PROVIDER ||
+    process.env.MENTOR_PROVIDER
+  ) as 'bedrock' | 'anthropic' | 'gemini' | 'openai' | 'openrouter' | 'custom' | undefined;
   const envMentorModel =
     process.env[`${envPrefix}_MENTOR_MODEL`] || process.env.OVERWATCH_MENTOR_MODEL;
   const envMaxCallsStr =
@@ -255,6 +261,11 @@ export function resolveConfig(
       envJuniorModel ??
       fileConfig.juniorModel ??
       'auto',
+
+    mentorProvider:
+      overrides.mentorProvider ??
+      envMentorProvider ??
+      fileConfig.mentorProvider,
 
     mentorModel:
       overrides.mentorModel ??
