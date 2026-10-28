@@ -51,7 +51,7 @@ export interface OverwatchConfig {
   customProtocol?: 'openai' | 'anthropic';
   customModels?: ModelEntry[];
 
-  juniorModel: string;
+  juniorModel?: string;
   mentorModel: string;
   mentorFallbacks: MentorConfig[];
 
@@ -239,7 +239,7 @@ export function resolveConfig(
       overrides.juniorModel ??
       envJuniorModel ??
       fileConfig.juniorModel ??
-      modelDefaults.junior,
+      'auto',
 
     mentorModel:
       overrides.mentorModel ??
