@@ -195,10 +195,33 @@ Agent-Overwatch supports direct API credentials, cloud providers, or unified rou
    export CUSTOM_HEADERS='{"X-Internal-Dept": "Engineering"}'
    ```
 
-Run the interactive wizard to save your keys:
+Run the provider-first interactive wizard to save your preferred provider, keys, and mentor model:
 ```bash
 npx agent-overwatch configure
 ```
+
+### Explicit Mentor Provider & Multi-Key Determinism
+
+When multiple provider API keys exist in your environment or `~/.agent-overwatch/config.json`, set `mentorProvider` to deterministically select the backend without accidental collisions or downgrades:
+
+```json
+{
+  "mentorProvider": "bedrock",
+  "mentorModel": "anthropic.claude-3-7-sonnet-20250219-v1:0"
+}
+```
+
+Or via environment variable:
+```bash
+export OVERWATCH_MENTOR_PROVIDER="bedrock"
+# Options: bedrock | anthropic | gemini | openai | openrouter | custom
+```
+
+### Dynamic Junior Model Auto-Detection
+
+In modern AI coding clients (such as Google Antigravity, Cursor, Windsurf, or Claude Code), developers switch the active worker model fluidly in the UI.
+
+Agent-Overwatch defaults `juniorModel` to `"auto"` and accepts the runtime model dynamically on every tool execution. You never need to hardcode a static worker model in `config.json`.
 
 ---
 
