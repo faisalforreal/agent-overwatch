@@ -42,9 +42,11 @@ export interface OverwatchStatusResult {
 export async function executeStatus(
   config: OverwatchConfig,
   router: ProviderRouter,
-  repoPath?: string
+  repoPath?: string,
+  runtimeJuniorModel?: string
 ): Promise<{ status: OverwatchStatusResult; markdown: string }> {
-  const tierRes = validateMentorSuperiority(config.mentorModel, config.juniorModel);
+  const effectiveJunior = runtimeJuniorModel || config.juniorModel || 'auto';
+  const tierRes = validateMentorSuperiority(config.mentorModel, effectiveJunior, { allowSameTier: config.allowSameTier });
   const health = await router.healthCheck();
 
   const sessionCalls = getSessionCallCount();
@@ -74,7 +76,7 @@ export async function executeStatus(
   }
 
   const result: OverwatchStatusResult = {
-    juniorModel: config.juniorModel,
+    juniorModel: effectiveJunior,
     mentorModel: config.mentorModel,
     tierValidation: {
       valid: tierRes.valid,
@@ -92,7 +94,9 @@ export async function executeStatus(
 
   const titleName = APP_NAME.charAt(0).toUpperCase() + APP_NAME.slice(1);
   let md = `### 🛰️ ${titleName} System Status\n\n`;
-  md += `- **Junior Model:** \`${config.juniorModel}\` (Tier: **${tierRes.juniorTier}**)\n`;
+  const juniorDisplay = effectiveJunior === 'auto' ? 'Auto-detected (Client Agent)' : effectiveJunior;
+  const tierDisplay = tierRes.juniorTier === 'auto' ? 'Auto' : tierRes.juniorTier;
+  md += `- **Junior Model:** \`${juniorDisplay}\` (Tier: **${tierDisplay}**)\n`;
   md += `- **Mentor Model:** \`${config.mentorModel}\` (Tier: **${tierRes.mentorTier}**)\n`;
   md += `- **Tier Hierarchy:** ${tierRes.valid ? '✅ Superiority Validated' : '⚠️ WARNING: ' + tierRes.warning}\n`;
   md += `- **Provider Connectivity:** ${health.ok ? `🟢 Connected (${health.provider}, ${health.latencyMs}ms)` : `🔴 Failed (${health.error})`}\n`;
