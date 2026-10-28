@@ -23,7 +23,7 @@
       "description": "Fable frontier model series"
     },
     {
-      "pattern": "^(anthropic/|bedrock/)?(anthropic\\.)?claude(-3)?-opus.*",
+      "pattern": "^(anthropic/|bedrock/)?((us|eu)\\.)?(anthropic\\.)?claude(-3)?-opus.*",
       "tier": "frontier",
       "ordinal": 2,
       "reasoning": true,
@@ -50,7 +50,7 @@
       "description": "OpenAI o1 reasoning model"
     },
     {
-      "pattern": "^(anthropic/|bedrock/)?(anthropic\\.)?claude-3-7-sonnet.*",
+      "pattern": "^(anthropic/|bedrock/)?((us|eu)\\.)?(anthropic\\.)?claude-3-7-sonnet.*",
       "tier": "strong",
       "ordinal": 3,
       "reasoning": true,
@@ -68,7 +68,7 @@
       "description": "DeepSeek R1 reasoning model (deepseek-reasoner)"
     },
     {
-      "pattern": "^(google/)?gemini-2\\.0-pro.*",
+      "pattern": "^(google/)?gemini-[0-9.]+-pro.*",
       "tier": "strong",
       "ordinal": 2,
       "reasoning": true,
@@ -77,7 +77,7 @@
       "description": "Google Gemini 2.0 Pro (gemini-2.0-pro-exp-02-05)"
     },
     {
-      "pattern": "^(anthropic/|bedrock/)?(anthropic\\.)?claude-3-5-sonnet.*",
+      "pattern": "^(anthropic/|bedrock/)?((us|eu)\\.)?(anthropic\\.)?claude-3-5-sonnet.*",
       "tier": "strong",
       "ordinal": 2,
       "reasoning": false,

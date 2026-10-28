@@ -22,6 +22,8 @@ describe('Tier Validation Engine', () => {
     expect(getModelTier('deepseek/deepseek-r1').tier).toBe('strong');
     expect(getModelTier('gpt-4o').tier).toBe('strong');
     expect(getModelTier('gemini-2.0-pro').tier).toBe('strong');
+    expect(getModelTier('gemini-3.1-pro-preview').tier).toBe('strong');
+    expect(getModelTier('us.anthropic.claude-3-7-sonnet-20250219-v1:0').tier).toBe('strong');
   });
 
   it('correctly maps medium and junior models', () => {
