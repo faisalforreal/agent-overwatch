@@ -222,6 +222,7 @@ export function installForClient(
     execPath?: string;
     useLocal?: boolean;
     skillSourceContent?: string;
+    alwaysOnRules?: boolean;
   } = {}
 ): ClientInstallResult {
   const paths = getClientPaths(client, options.customHome, options.workspaceRoot);
@@ -246,7 +247,7 @@ export function installForClient(
     if (fs.existsSync(paths.mcpConfigPath)) {
       try {
         const raw = fs.readFileSync(paths.mcpConfigPath, 'utf-8');
-        existingJson = JSON.parse(raw);
+        existingJson = JSON.parse(raw.replace(/^\uFEFF/, ''));
       } catch {
         existingJson = {};
       }
@@ -313,7 +314,7 @@ export function installForClient(
   }
 
   // 3. Manage Rules (Cursor .mdc, Windsurf .md, Claude Code CLAUDE.md, Antigravity AGENTS.md)
-  if (paths.rulesPath) {
+  if (paths.rulesPath && (options.uninstall || options.alwaysOnRules !== false)) {
     const rulesDir = path.dirname(paths.rulesPath);
     const isStandaloneRuleFile =
       client === 'cursor' || client === 'windsurf' || client === 'vscode';

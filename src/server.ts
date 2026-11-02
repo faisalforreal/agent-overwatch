@@ -47,7 +47,6 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
   config: OverwatchConfig;
 } {
   const config = options.config || resolveConfig();
-  const router = new ProviderRouter(config, options.mockProvider);
 
   const server = new Server(
     {
@@ -62,6 +61,8 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
     }
   );
 
+  const router = new ProviderRouter(config, options.mockProvider, { mcpServer: server });
+
   // List tools handler
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
@@ -69,7 +70,7 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
         {
           name: TOOL_PLAN_CHECK,
           description:
-            'MANDATORY pre-implementation gate: Senior architect evaluates proposed plan against user goal, edge cases, and repo architecture before code is written.',
+            '[Opt-in: Call ONLY when requested by user] Pre-implementation gate: Senior architect evaluates proposed plan against user goal, edge cases, and repo architecture before code is written.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -94,6 +95,19 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
                 type: 'string',
                 description: 'Notes on framework, dependencies, or system constraints',
               },
+              mentor_provider: {
+                type: 'string',
+                enum: ['gemini', 'anthropic', 'openai', 'openrouter', 'bedrock', 'custom', 'antigravity'],
+                description: 'Optional per-call override for mentor provider',
+              },
+              mentor_model: {
+                type: 'string',
+                description: 'Optional per-call override for mentor model (e.g. gemini-4-argon, claude-opus-5.5)',
+              },
+              junior_model: {
+                type: 'string',
+                description: 'Optional junior model identifier if different from default',
+              },
             },
             required: ['user_goal', 'proposed_plan'],
           },
@@ -101,7 +115,7 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
         {
           name: TOOL_CHECKPOINT,
           description:
-            'MANDATORY steering gate: Evaluates progress after every major milestone and after 2 consecutive failures. Inspects git diff and dictates the next 3-5 concrete steps and avoid list.',
+            '[Opt-in: Call ONLY when requested by user] Steering gate: Evaluates progress after every major milestone and after 2 consecutive failures. Inspects git diff and dictates the next 3-5 concrete steps and avoid list.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -136,6 +150,19 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
                 type: 'string',
                 description: 'Compiler, test, or runtime error log',
               },
+              mentor_provider: {
+                type: 'string',
+                enum: ['gemini', 'anthropic', 'openai', 'openrouter', 'bedrock', 'custom', 'antigravity'],
+                description: 'Optional per-call override for mentor provider',
+              },
+              mentor_model: {
+                type: 'string',
+                description: 'Optional per-call override for mentor model',
+              },
+              junior_model: {
+                type: 'string',
+                description: 'Optional junior model identifier if different from default',
+              },
             },
             required: ['user_goal', 'state'],
           },
@@ -143,7 +170,7 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
         {
           name: TOOL_REVIEW,
           description:
-            'Full code review of real git diff or draft code: detects logic defects, race conditions, edge cases, and provides actionable coaching prompts.',
+            '[Opt-in: Call ONLY when requested by user] Full code review of real git diff or draft code: detects logic defects, race conditions, edge cases, and provides actionable coaching prompts.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -167,9 +194,18 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
                 type: 'string',
                 description: 'Test execution outputs or errors',
               },
+              mentor_provider: {
+                type: 'string',
+                enum: ['gemini', 'anthropic', 'openai', 'openrouter', 'bedrock', 'custom', 'antigravity'],
+                description: 'Optional per-call override for mentor provider',
+              },
               mentor_model: {
                 type: 'string',
                 description: 'Optional per-call override for mentor model (must pass tier check)',
+              },
+              junior_model: {
+                type: 'string',
+                description: 'Optional junior model identifier if different from default',
               },
             },
             required: ['user_goal'],
@@ -178,7 +214,7 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
         {
           name: TOOL_QUICK_HINT,
           description:
-            'Targeted diagnosis to break out of debug loops when junior model is stuck on a compiler error or test failure.',
+            '[Opt-in: Call ONLY when requested by user] Targeted diagnosis to break out of debug loops when junior model is stuck on a compiler error or test failure.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -198,6 +234,19 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
                 type: 'string',
                 description: 'Absolute path to repository root for tracking and context',
               },
+              mentor_provider: {
+                type: 'string',
+                enum: ['gemini', 'anthropic', 'openai', 'openrouter', 'bedrock', 'custom', 'antigravity'],
+                description: 'Optional per-call override for mentor provider',
+              },
+              mentor_model: {
+                type: 'string',
+                description: 'Optional per-call override for mentor model',
+              },
+              junior_model: {
+                type: 'string',
+                description: 'Optional junior model identifier if different from default',
+              },
             },
             required: ['problem_description', 'error_or_log'],
           },
@@ -205,7 +254,7 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
         {
           name: TOOL_VERIFY,
           description:
-            'MANDATORY completion gate: Audits total git diff against base ref and verifies test suite results before declaring task done.',
+            '[Opt-in: Call ONLY when requested by user] Completion gate: Audits total git diff against base ref and verifies test suite results before declaring task done.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -225,6 +274,19 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
                 type: 'string',
                 description: 'Console output of test suite execution',
               },
+              mentor_provider: {
+                type: 'string',
+                enum: ['gemini', 'anthropic', 'openai', 'openrouter', 'bedrock', 'custom', 'antigravity'],
+                description: 'Optional per-call override for mentor provider',
+              },
+              mentor_model: {
+                type: 'string',
+                description: 'Optional per-call override for mentor model',
+              },
+              junior_model: {
+                type: 'string',
+                description: 'Optional junior model identifier if different from default',
+              },
             },
             required: ['user_goal', 'repo_path'],
           },
@@ -232,13 +294,17 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
         {
           name: TOOL_STATUS,
           description:
-            'Inspects configured junior and mentor models, tier validation result, provider health and latency ping, and session call budget.',
+            '[Opt-in: Call ONLY when requested by user] Inspects configured junior and mentor models, tier validation result, provider health and latency ping, and session call budget.',
           inputSchema: {
             type: 'object',
             properties: {
               repo_path: {
                 type: 'string',
                 description: 'Repository path to check local notes and session budget',
+              },
+              junior_model: {
+                type: 'string',
+                description: 'Optional junior model identifier to test tier validation against',
               },
             },
           },
@@ -251,6 +317,30 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args, _meta } = request.params;
     const progressToken = _meta?.progressToken;
+
+    // Refresh configuration dynamically so modifications to ~/.agent-overwatch/config.json take effect live
+    const liveConfig = resolveConfig(options.config);
+    router.setConfig(liveConfig);
+
+    // If disabled via config, bypass non-status checks immediately
+    if (liveConfig.enabled === false && name !== TOOL_STATUS) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `[${APP_NAME}] Oversight is currently disabled (OVERWATCH_ENABLED=false). Request bypassed.`,
+          },
+          {
+            type: 'text',
+            text: JSON.stringify({
+              verdict: 'APPROVED',
+              guidance: 'Overwatch disabled by configuration.',
+              score: 100,
+            }),
+          },
+        ],
+      };
+    }
 
     // Build Progress & Keep-Alive Dispatcher
     const onProgress: ProgressCallback = (progress, total, message) => {
@@ -280,13 +370,13 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
       if (name === TOOL_PLAN_CHECK) {
         const input = OverwatchPlanCheckInputSchema.parse(args);
         const timeoutMs =
-          config.toolTimeouts[TOOL_PLAN_CHECK] ||
+          liveConfig.toolTimeouts[TOOL_PLAN_CHECK] ||
           DEFAULT_TOOL_TIMEOUTS[TOOL_PLAN_CHECK] ||
           180000;
         const { feedback, markdown } = await executePlanCheck(
           input,
           router,
-          config.maxCallsPerSession,
+          liveConfig.maxCallsPerSession,
           onProgress,
           timeoutMs
         );
@@ -301,13 +391,13 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
       if (name === TOOL_CHECKPOINT) {
         const input = OverwatchCheckpointInputSchema.parse(args);
         const timeoutMs =
-          config.toolTimeouts[TOOL_CHECKPOINT] ||
+          liveConfig.toolTimeouts[TOOL_CHECKPOINT] ||
           DEFAULT_TOOL_TIMEOUTS[TOOL_CHECKPOINT] ||
           90000;
         const { feedback, markdown } = await executeCheckpoint(
           input,
           router,
-          config.maxCallsPerSession,
+          liveConfig.maxCallsPerSession,
           onProgress,
           timeoutMs
         );
@@ -322,14 +412,14 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
       if (name === TOOL_REVIEW) {
         const input = OverwatchReviewInputSchema.parse(args);
         const timeoutMs =
-          config.toolTimeouts[TOOL_REVIEW] ||
+          liveConfig.toolTimeouts[TOOL_REVIEW] ||
           DEFAULT_TOOL_TIMEOUTS[TOOL_REVIEW] ||
           120000;
         const { feedback, markdown } = await executeReview(
           input,
           router,
-          config.juniorModel,
-          config.maxCallsPerSession,
+          liveConfig.juniorModel,
+          liveConfig.maxCallsPerSession,
           onProgress,
           timeoutMs
         );
@@ -344,7 +434,7 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
       if (name === TOOL_QUICK_HINT) {
         const input = OverwatchQuickHintInputSchema.parse(args);
         const timeoutMs =
-          config.toolTimeouts[TOOL_QUICK_HINT] ||
+          liveConfig.toolTimeouts[TOOL_QUICK_HINT] ||
           DEFAULT_TOOL_TIMEOUTS[TOOL_QUICK_HINT] ||
           45000;
         const repoPath = input.repo_path || process.cwd();
@@ -352,7 +442,7 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
           input,
           router,
           repoPath,
-          config.maxCallsPerSession,
+          liveConfig.maxCallsPerSession,
           onProgress,
           timeoutMs
         );
@@ -367,13 +457,13 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
       if (name === TOOL_VERIFY) {
         const input = OverwatchVerifyInputSchema.parse(args);
         const timeoutMs =
-          config.toolTimeouts[TOOL_VERIFY] ||
+          liveConfig.toolTimeouts[TOOL_VERIFY] ||
           DEFAULT_TOOL_TIMEOUTS[TOOL_VERIFY] ||
           180000;
         const { feedback, markdown } = await executeVerify(
           input,
           router,
-          config.maxCallsPerSession,
+          liveConfig.maxCallsPerSession,
           onProgress,
           timeoutMs
         );
@@ -389,9 +479,10 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
         const input = OverwatchStatusInputSchema.parse(args || {});
         const repoPath = input.repo_path || process.cwd();
         const { status, markdown } = await executeStatus(
-          config,
+          liveConfig,
           router,
-          repoPath
+          repoPath,
+          input.junior_model
         );
         return {
           content: [

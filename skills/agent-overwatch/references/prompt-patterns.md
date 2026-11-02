@@ -1,9 +1,9 @@
-# Overwatch Prompt Patterns
+# Agent-Overwatch Prompt Patterns
 
-How junior agents should execute the mentor's `coaching_prompt`:
+How junior agents should execute the mentor's `coaching_prompt` when Agent-Overwatch is activated:
 
 ## Pattern 1: Applying Direct Coaching Prompts
-When `overwatch_checkpoint` or `overwatch_review` returns:
+When `agent-overwatch_checkpoint` or `agent-overwatch_review` returns:
 ```json
 "coaching_prompt": "Update src/auth.ts to add expiration check before decoding payload, then add test in tests/auth.test.ts"
 ```

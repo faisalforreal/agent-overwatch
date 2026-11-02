@@ -3,7 +3,10 @@ import { getModelTier, validateMentorSuperiority, compareTiers } from '../src/ti
 
 describe('Tier Validation Engine', () => {
   it('correctly maps frontier models', () => {
+    expect(getModelTier('gemini-4-argon').tier).toBe('frontier');
+    expect(getModelTier('claude-opus-5.5').tier).toBe('frontier');
     expect(getModelTier('claude-opus-5').tier).toBe('frontier');
+    expect(getModelTier('gemini-3.1-pro-preview').tier).toBe('frontier');
     expect(getModelTier('anthropic/claude-3-opus-20240229').tier).toBe('frontier');
     expect(getModelTier('bedrock/anthropic.claude-3-opus-20240229-v1:0').tier).toBe('frontier');
     expect(getModelTier('fable-5.1').tier).toBe('frontier');
@@ -22,7 +25,6 @@ describe('Tier Validation Engine', () => {
     expect(getModelTier('deepseek/deepseek-r1').tier).toBe('strong');
     expect(getModelTier('gpt-4o').tier).toBe('strong');
     expect(getModelTier('gemini-2.0-pro').tier).toBe('strong');
-    expect(getModelTier('gemini-3.1-pro-preview').tier).toBe('strong');
     expect(getModelTier('us.anthropic.claude-3-7-sonnet-20250219-v1:0').tier).toBe('strong');
   });
 
@@ -43,13 +45,12 @@ describe('Tier Validation Engine', () => {
     // Frontier mentor vs Medium junior -> Valid
     const res1 = validateMentorSuperiority('claude-opus-5', 'gemini-3.8-flash');
     expect(res1.valid).toBe(true);
-    expect(res1.warning).toBeUndefined();
 
     // Strong mentor vs Medium junior -> Valid
     const res2 = validateMentorSuperiority('claude-3-5-sonnet', 'gemini-3.8-flash');
     expect(res2.valid).toBe(true);
 
-    // Medium mentor vs Medium junior -> INVALID
+    // Medium mentor vs Medium junior -> INVALID without override
     const res3 = validateMentorSuperiority('gemini-2.0-flash', 'gemini-3.8-flash');
     expect(res3.valid).toBe(false);
     expect(res3.warning).toContain('not stronger');

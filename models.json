@@ -14,6 +14,60 @@
   },
   "models": [
     {
+      "pattern": "^(google/|gemini/)?(gemini-4-argon|gemini-argon|gemini-4-astra|gemini-astra).*",
+      "tier": "frontier",
+      "ordinal": 3,
+      "reasoning": true,
+      "inputCostPerMillion": 5.0,
+      "outputCostPerMillion": 20.0,
+      "description": "Google Gemini 4 Argon / Astra frontier models"
+    },
+    {
+      "pattern": "^(antigravity/)?pro$",
+      "tier": "frontier",
+      "ordinal": 3,
+      "reasoning": true,
+      "inputCostPerMillion": 0.0,
+      "outputCostPerMillion": 0.0,
+      "description": "Antigravity native Pro / Argon frontier model tier"
+    },
+    {
+      "pattern": "^(anthropic/|bedrock/)?((us|eu|global)\\.)?(anthropic\\.)?claude-(opus-5([.-]5)?|5([.-]5)?-opus).*",
+      "tier": "frontier",
+      "ordinal": 3,
+      "reasoning": true,
+      "inputCostPerMillion": 15.0,
+      "outputCostPerMillion": 75.0,
+      "description": "Anthropic Claude Opus 5.5 frontier model"
+    },
+    {
+      "pattern": "^(anthropic/|bedrock/)?((us|eu|global)\\.)?(anthropic\\.)?claude-(opus-4([.-]5)?|4([.-]5)?-opus).*",
+      "tier": "frontier",
+      "ordinal": 2,
+      "reasoning": true,
+      "inputCostPerMillion": 15.0,
+      "outputCostPerMillion": 75.0,
+      "description": "Anthropic Claude Opus 4.5 frontier model"
+    },
+    {
+      "pattern": "^(google/|gemini/)?gemini-3(\\.[0-9]+)?-pro.*",
+      "tier": "frontier",
+      "ordinal": 2,
+      "reasoning": true,
+      "inputCostPerMillion": 3.0,
+      "outputCostPerMillion": 15.0,
+      "description": "Google Gemini 3.x Pro frontier series"
+    },
+    {
+      "pattern": "^(openai/)?(o3-pro|gpt-5).*",
+      "tier": "frontier",
+      "ordinal": 3,
+      "reasoning": true,
+      "inputCostPerMillion": 20.0,
+      "outputCostPerMillion": 80.0,
+      "description": "OpenAI o3-pro / GPT-5 frontier reasoning series"
+    },
+    {
       "pattern": "^fable(-[0-9.]+)?.*",
       "tier": "frontier",
       "ordinal": 3,

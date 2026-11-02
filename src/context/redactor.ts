@@ -19,7 +19,7 @@ const SECRET_PATTERNS: Array<{ name: string; regex: RegExp; replacement: string 
   // Google AI API Keys
   {
     name: 'Google API Key',
-    regex: /AIza[0-9A-Za-z-_]{35}/g,
+    regex: /(?:AIza[0-9A-Za-z-_]{35}|AQ\.[0-9A-Za-z\-_]{20,})/g,
     replacement: '[REDACTED_GOOGLE_KEY]',
   },
   // AWS Access Key ID & Secret Key

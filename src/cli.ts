@@ -75,6 +75,9 @@ export function createCli(): Command {
       if (config.bedrockBaseUrl) {
         console.log(`  - Bedrock Base URL:  ${config.bedrockBaseUrl}`);
       }
+      if (config.mentorProvider === 'antigravity') {
+        console.log('  - Antigravity Mode:  Native (MCP sampling / subagent dispatch, zero external API key)');
+      }
       if (config.customBaseUrl) {
         console.log(`  - Custom Base URL:   ${config.customBaseUrl}`);
         console.log(`  - Custom API Key:    ${maskApiKey(config.customApiKey)}`);
@@ -123,7 +126,7 @@ export function createCli(): Command {
             if (cl === 'codex') {
               registered = raw.includes(`[mcp_servers.${APP_NAME}]`);
             } else {
-              const parsed = JSON.parse(raw);
+              const parsed = JSON.parse(raw.replace(/^\uFEFF/, ''));
               if (parsed.mcpServers?.[APP_NAME]) {
                 registered = true;
               }
@@ -151,6 +154,7 @@ export function createCli(): Command {
     .option('--local', 'Register local development binary path for instant code reloads on npm run build')
     .option('--dry-run', 'Preview changes without modifying any files')
     .option('--uninstall', `Remove ${APP_NAME} from the specified client`)
+    .option('--always-on', 'Inject mandatory checkpoint rules into global AGENTS.md or client rule files (default: off)')
     .action((opts) => {
       const client = opts.client as SupportedClient;
       const clientsToRun: SupportedClient[] =
@@ -166,6 +170,7 @@ export function createCli(): Command {
           dryRun: opts.dryRun,
           uninstall: opts.uninstall,
           useLocal: opts.local,
+          alwaysOnRules: Boolean(opts.alwaysOn),
         });
 
         console.log(`[${c}] ${res.message}`);
@@ -194,6 +199,7 @@ export function createCli(): Command {
       const current = resolveConfig();
       console.log(`\n🛠️  --- ${APP_NAME.toUpperCase()} CONFIGURATION WIZARD --- 🛠️\n`);
       console.log('Select your primary Mentor Provider:');
+      console.log('  0) Antigravity Native / Pro (antigravity - zero API key)');
       console.log('  1) Amazon Bedrock (bedrock)');
       console.log('  2) Anthropic (anthropic)');
       console.log('  3) Google Gemini (gemini)');
@@ -201,10 +207,11 @@ export function createCli(): Command {
       console.log('  5) OpenRouter (openrouter)');
       console.log('  6) Custom / Local (custom)');
 
-      const providerChoice = await ask(`\nProvider [${current.mentorProvider || '1'}]: `);
-      let provider: 'bedrock' | 'anthropic' | 'gemini' | 'openai' | 'openrouter' | 'custom' = current.mentorProvider || 'bedrock';
+      const providerChoice = await ask(`\nProvider [${current.mentorProvider || '0'}]: `);
+      let provider: 'antigravity' | 'bedrock' | 'anthropic' | 'gemini' | 'openai' | 'openrouter' | 'custom' = current.mentorProvider || 'antigravity';
       const pRaw = providerChoice.trim().toLowerCase();
-      if (pRaw === '1' || pRaw === 'bedrock') provider = 'bedrock';
+      if (pRaw === '0' || pRaw === 'antigravity') provider = 'antigravity';
+      else if (pRaw === '1' || pRaw === 'bedrock') provider = 'bedrock';
       else if (pRaw === '2' || pRaw === 'anthropic') provider = 'anthropic';
       else if (pRaw === '3' || pRaw === 'gemini') provider = 'gemini';
       else if (pRaw === '4' || pRaw === 'openai') provider = 'openai';
@@ -215,7 +222,12 @@ export function createCli(): Command {
         mentorProvider: provider,
       };
 
-      if (provider === 'bedrock') {
+      if (provider === 'antigravity') {
+        const defaultModel = current.mentorModel || 'gemini-4-argon';
+        const mentor = await ask(`Mentor Model [${defaultModel}]: `);
+        newConfig.mentorModel = mentor.trim() || defaultModel;
+        console.log('  Note: Antigravity provider uses native Antigravity host sampling / subagent dispatch (no API key required).');
+      } else if (provider === 'bedrock') {
         const key = await ask(`Bedrock API Key / Bearer Token [${maskApiKey(current.bedrockApiKey)}]: `);
         if (key.trim()) newConfig.bedrockApiKey = key.trim();
 

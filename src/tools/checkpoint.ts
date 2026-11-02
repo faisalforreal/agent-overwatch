@@ -47,6 +47,7 @@ export async function executeCheckpoint(
   if (onProgress) onProgress(20, 100, 'Connecting to mentor for milestone steering...');
 
   const feedback = await router.executeReviewWithFallbacks({
+    model: input.mentor_model,
     mentorProvider: input.mentor_provider,
     systemPrompt: OVERWATCH_SYSTEM_PROMPT,
     userPrompt: prompt,
@@ -59,7 +60,7 @@ export async function executeCheckpoint(
     appendRepoNotes(repoPath, feedback.notes_to_save);
   }
 
-  recordCallUsage(repoPath, TOOL_CHECKPOINT, 'mentor', feedback.usage);
+  recordCallUsage(repoPath, TOOL_CHECKPOINT, feedback.modelUsed || input.mentor_model || 'mentor', feedback.usage);
 
   return {
     feedback,

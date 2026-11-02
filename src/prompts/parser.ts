@@ -1,8 +1,23 @@
 import { OverwatchFeedback, OverwatchFeedbackSchema, Verdict } from '../types.js';
 import { APP_NAME } from '../constants.js';
 
+export function extractJsonCandidate(text: string): string {
+  if (!text) return '';
+  const cleaned = text.trim();
+  const fenceMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fenceMatch && fenceMatch[1]) {
+    return fenceMatch[1].trim();
+  }
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    return cleaned.slice(firstBrace, lastBrace + 1).trim();
+  }
+  return cleaned;
+}
+
 export function cleanJsonFences(text: string): string {
-  let cleaned = text.trim();
+  let cleaned = extractJsonCandidate(text);
   // Strip opening markdown code fence
   cleaned = cleaned.replace(/^```(?:json)?\s*\n?/i, '');
   // Strip trailing markdown code fence

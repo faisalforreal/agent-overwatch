@@ -46,6 +46,7 @@ export async function executeVerify(
   if (onProgress) onProgress(25, 100, 'Submitting diff and test results to mentor for verification...');
 
   const feedback = await router.executeReviewWithFallbacks({
+    model: input.mentor_model,
     mentorProvider: input.mentor_provider,
     systemPrompt: OVERWATCH_SYSTEM_PROMPT,
     userPrompt: prompt,
@@ -58,7 +59,7 @@ export async function executeVerify(
     appendRepoNotes(repoPath, feedback.notes_to_save);
   }
 
-  recordCallUsage(repoPath, TOOL_VERIFY, 'mentor', feedback.usage);
+  recordCallUsage(repoPath, TOOL_VERIFY, feedback.modelUsed || input.mentor_model || 'mentor', feedback.usage);
 
   return {
     feedback,

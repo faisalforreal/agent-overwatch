@@ -10,13 +10,22 @@ export interface FileContextItem {
   truncated: boolean;
 }
 
+/**
+ * Returns true if child is equal to or located strictly inside parent directory.
+ * Prevents sibling-directory prefix escapes (e.g. /repo-secrets vs /repo).
+ */
+export function isSubpath(parent: string, child: string): boolean {
+  const rel = path.relative(parent, child);
+  return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
+}
+
 export function isPathSafe(repoPath: string, targetPath: string): boolean {
   try {
     const absRepo = path.resolve(repoPath);
     const absTarget = path.resolve(absRepo, targetPath);
 
-    // Basic startsWith check
-    if (!absTarget.startsWith(absRepo)) {
+    // Verify target is strictly within repo directory
+    if (!isSubpath(absRepo, absTarget)) {
       return false;
     }
 
@@ -24,7 +33,7 @@ export function isPathSafe(repoPath: string, targetPath: string): boolean {
     if (fs.existsSync(absTarget)) {
       const realTarget = fs.realpathSync(absTarget);
       const realRepo = fs.realpathSync(absRepo);
-      if (!realTarget.startsWith(realRepo)) {
+      if (!isSubpath(realRepo, realTarget)) {
         return false;
       }
     }

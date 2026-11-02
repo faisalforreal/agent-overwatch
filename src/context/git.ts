@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { DEFAULT_MAX_DIFF_BYTES } from '../constants.js';
 import { redactSecrets } from './redactor.js';
 
@@ -9,9 +9,21 @@ export interface GitContextResult {
   truncated: boolean;
 }
 
+/**
+ * Validates a git reference string to prevent command/flag injection.
+ * Disallows leading dashes, spaces, semicolons, shell metacharacters.
+ */
+export function isValidGitRef(ref: string): boolean {
+  if (!ref || typeof ref !== 'string') return false;
+  const trimmed = ref.trim();
+  if (trimmed.startsWith('-')) return false; // Prevent flag injection (e.g. --output=...)
+  // Safe git ref characters: alphanumeric, dots, slashes, underscores, tilde, caret, at, colon
+  return /^[a-zA-Z0-9._\-/~^:@{}]+$/.test(trimmed);
+}
+
 export function getGitStatus(repoPath: string): string {
   try {
-    const output = execSync('git status --porcelain', {
+    const output = execFileSync('git', ['status', '--porcelain'], {
       cwd: repoPath,
       encoding: 'utf-8',
       timeout: 10000,
@@ -29,9 +41,18 @@ export function getGitDiff(
   maxBytes = DEFAULT_MAX_DIFF_BYTES
 ): { diff: string; truncated: boolean } {
   try {
-    // If baseRef is given, diff against it; otherwise diff HEAD (covers both staged and unstaged)
-    const cmd = baseRef ? `git diff ${baseRef}` : 'git diff HEAD';
-    let output = execSync(cmd, {
+    let diffArgs: string[];
+    if (baseRef && baseRef.trim()) {
+      const cleanRef = baseRef.trim();
+      if (!isValidGitRef(cleanRef)) {
+        throw new Error(`Invalid git reference: ${cleanRef}`);
+      }
+      diffArgs = ['diff', cleanRef, '--'];
+    } else {
+      diffArgs = ['diff', 'HEAD', '--'];
+    }
+
+    let output = execFileSync('git', diffArgs, {
       cwd: repoPath,
       encoding: 'utf-8',
       timeout: 15000,
@@ -41,7 +62,7 @@ export function getGitDiff(
 
     if (!output.trim()) {
       // If HEAD diff is empty, also try unstaged diff
-      output = execSync('git diff', {
+      output = execFileSync('git', ['diff', '--'], {
         cwd: repoPath,
         encoding: 'utf-8',
         timeout: 10000,
@@ -57,7 +78,8 @@ export function getGitDiff(
       // Slice by bytes, not char index, to honour the cap precisely with multibyte content
       const buf = Buffer.from(output, 'utf-8').subarray(0, maxBytes);
       // Trim any incomplete multibyte sequence at the cut point
-      output = buf.toString('utf-8').replace(/\uFFFD+$/, '') +
+      output =
+        buf.toString('utf-8').replace(/\uFFFD+$/, '') +
         `\n\n[... Git diff truncated at ${Math.round(maxBytes / 1024)} KB cap for model context ...]`;
     }
 
@@ -77,7 +99,7 @@ export function gatherGitContext(
 ): GitContextResult {
   try {
     // Check if repoPath is in a git repo
-    execSync('git rev-parse --is-inside-work-tree', {
+    execFileSync('git', ['rev-parse', '--is-inside-work-tree'], {
       cwd: repoPath,
       encoding: 'utf-8',
       stdio: ['ignore', 'pipe', 'ignore'],

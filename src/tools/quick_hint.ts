@@ -33,6 +33,7 @@ export async function executeQuickHint(
   const prompt = buildQuickHintPrompt(input);
 
   const feedback = await router.executeReviewWithFallbacks({
+    model: input.mentor_model,
     mentorProvider: input.mentor_provider,
     systemPrompt: OVERWATCH_SYSTEM_PROMPT,
     userPrompt: prompt,
@@ -41,7 +42,7 @@ export async function executeQuickHint(
   });
 
   const targetRepo = repoPath || input.repo_path || process.cwd();
-  recordCallUsage(targetRepo, TOOL_QUICK_HINT, 'mentor', feedback.usage);
+  recordCallUsage(targetRepo, TOOL_QUICK_HINT, feedback.modelUsed || input.mentor_model || 'mentor', feedback.usage);
 
   return {
     feedback,

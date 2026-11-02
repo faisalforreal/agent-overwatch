@@ -60,6 +60,12 @@ export function loadModelsData(customPath?: string): ModelsData {
       },
     },
     models: [
+      { pattern: '.*(argon|astra).*', tier: 'frontier', ordinal: 3, reasoning: true, description: 'Gemini Argon / Astra series', inputCostPerMillion: 5.0, outputCostPerMillion: 20.0 },
+      { pattern: '^(antigravity/)?pro$', tier: 'frontier', ordinal: 3, reasoning: true, description: 'Antigravity Pro tier', inputCostPerMillion: 0.0, outputCostPerMillion: 0.0 },
+      { pattern: '.*opus.*5([.-]5)?.*', tier: 'frontier', ordinal: 3, reasoning: true, description: 'Claude Opus 5.5', inputCostPerMillion: 15.0, outputCostPerMillion: 75.0 },
+      { pattern: '.*(o3-pro|gpt-5).*', tier: 'frontier', ordinal: 3, reasoning: true, description: 'OpenAI o3-pro / GPT-5 series', inputCostPerMillion: 20.0, outputCostPerMillion: 80.0 },
+      { pattern: '.*opus.*4([.-]5)?.*', tier: 'frontier', ordinal: 2, reasoning: true, description: 'Claude Opus 4.5', inputCostPerMillion: 15.0, outputCostPerMillion: 75.0 },
+      { pattern: '.*gemini.*3.*pro.*', tier: 'frontier', ordinal: 2, reasoning: true, description: 'Gemini 3 Pro series', inputCostPerMillion: 3.0, outputCostPerMillion: 15.0 },
       { pattern: '.*fable.*', tier: 'frontier', ordinal: 3, reasoning: true, description: 'Fable series', inputCostPerMillion: 15.0, outputCostPerMillion: 75.0 },
       { pattern: '.*opus.*', tier: 'frontier', ordinal: 2, reasoning: true, description: 'Opus series', inputCostPerMillion: 15.0, outputCostPerMillion: 75.0 },
       { pattern: '^(openai/)?o3(-mini)?$', tier: 'frontier', ordinal: 2, reasoning: true, description: 'o3 series', inputCostPerMillion: 1.1, outputCostPerMillion: 4.4 },

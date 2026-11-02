@@ -2,35 +2,46 @@
 name: agent-overwatch
 description: >-
   Connect junior AI coding agents (Gemini Flash, Haiku, GPT-4o-mini) to senior mentor models
-  (Claude Opus, Fable, Gemini Argon, o3) via mandatory checkpoints, automated context gathering,
-  architectural steering, and release verification.
+  (Claude Opus, Fable, Gemini Argon, o3) via architectural plan evaluation, milestone checkpoints,
+  code review, and verification. Use ONLY when the user explicitly requests overwatch, senior mentor review,
+  or uses the /agent-overwatch slash command.
 ---
 
 # Agent-Overwatch: Senior Architect & Mentor Steering Skill
 
-This skill enforces a **Mentor-in-the-Loop** steering protocol for junior coding models.
-Junior models are fast and cost-effective, but can miss edge cases, introduce subtle bugs, or drift into dead ends. 
-**Agent-Overwatch** connects you directly to a senior staff engineer model at mandatory checkpoints.
+Connects junior coding agents to senior staff engineer models (Gemini 4 Argon, Claude Opus 5.5, Fable 5.1, OpenAI o3) for architectural plan evaluation, milestone checkpointing, targeted debugging, and release verification.
 
 ---
 
-## 🛑 The Non-Negotiable Checkpoint Protocol
+## ⚡ Activation Policy (Opt-In Only)
 
-You MUST follow these gates. "Consulting when unsure" is NOT permitted—always trigger these tools:
+> [!IMPORTANT]
+> **DO NOT trigger or call `agent-overwatch` tools unprompted.**
+> This skill is strictly **OPT-IN**. Only activate and follow this protocol when:
+> 1. The user explicitly requests senior oversight, mentor review, or architectural validation in their prompt (e.g., "use agent-overwatch", "have the mentor check this", "@agent-overwatch").
+> 2. The user invokes the `/agent-overwatch` command or specifies overwatch mode.
+>
+> During normal coding requests where the user has not asked for overwatch, work independently and do not invoke these tools.
+
+---
+
+## 🛑 The Checkpoint Protocol (When Activated)
+
+When the user activates Agent-Overwatch, follow these gates:
 
 ```text
-[User Prompt]
-      │
-      ▼
-1. Plan Solution ──────► [MANDATORY GATE: agent-overwatch_plan_check]
-                                   │ (Approved or Refined)
-                                   ▼
-2. Implementation Loop ─► [MANDATORY GATE: agent-overwatch_checkpoint]
-                                   │ (Every milestone & after 2 failures)
-                                   ▼
-3. Final Diff & Tests ──► [MANDATORY GATE: agent-overwatch_verify]
-                                   │ (Must receive APPROVED)
-                                   ▼
+[User Prompt with Overwatch Request]
+       │
+       ▼
+1. Plan Solution ──────► [Pre-Implementation Gate: agent-overwatch_plan_check]
+                                    │ (Approved or Refined)
+                                    ▼
+2. Implementation Loop ─► [Milestone Gate: agent-overwatch_checkpoint]
+                                    │ (Every major milestone & after 2 failures)
+                                    ▼
+3. Final Diff & Tests ──► [Completion Gate: agent-overwatch_verify]
+                                    │ (Must receive APPROVED)
+                                    ▼
 [Deliver to User]
 ```
 

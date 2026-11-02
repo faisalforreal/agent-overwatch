@@ -49,6 +49,7 @@ export async function executePlanCheck(
   if (onProgress) onProgress(20, 100, 'Submitting plan to mentor model for architectural check...');
 
   const feedback = await router.executeReviewWithFallbacks({
+    model: input.mentor_model,
     mentorProvider: input.mentor_provider,
     systemPrompt: OVERWATCH_SYSTEM_PROMPT,
     userPrompt: prompt,
@@ -61,7 +62,7 @@ export async function executePlanCheck(
     appendRepoNotes(repoPath, feedback.notes_to_save);
   }
 
-  recordCallUsage(repoPath, TOOL_PLAN_CHECK, 'mentor', feedback.usage);
+  recordCallUsage(repoPath, TOOL_PLAN_CHECK, feedback.modelUsed || input.mentor_model || 'mentor', feedback.usage);
 
   return {
     feedback,

@@ -121,6 +121,7 @@ export class GeminiProvider implements MentorProvider {
       const candidate = data.candidates?.[0];
       if (candidate?.content?.parts) {
         for (const part of candidate.content.parts) {
+          if (part.thought) continue;
           if (part.text) rawText += part.text;
         }
       }

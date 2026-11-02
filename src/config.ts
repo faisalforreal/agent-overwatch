@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 import {
   APP_NAME,
@@ -16,11 +17,43 @@ import {
 import { getModelDefaults } from './tiers.js';
 import { ModelEntry } from './types.js';
 
-// Load .env if present in current working directory
-dotenv.config();
+/**
+ * Silently loads environment variables from candidate .env files in order:
+ * 1. Target workspace repo path (.env)
+ * 2. process.cwd() (.env)
+ * 3. Package root (.env)
+ * 4. ~/.agent-overwatch/.env
+ */
+export function loadAllDotEnvs(customRepoPath?: string): void {
+  const candidatePaths: string[] = [];
+  if (customRepoPath) {
+    candidatePaths.push(path.join(customRepoPath, '.env'));
+  }
+  candidatePaths.push(path.join(process.cwd(), '.env'));
+
+  try {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    candidatePaths.push(path.resolve(__dirname, '../.env'));
+    candidatePaths.push(path.resolve(__dirname, '../../.env'));
+  } catch {}
+
+  candidatePaths.push(path.join(os.homedir(), `.${APP_NAME}`, '.env'));
+
+  for (const envPath of candidatePaths) {
+    try {
+      if (fs.existsSync(envPath)) {
+        dotenv.config({ path: envPath, override: false });
+      }
+    } catch {}
+  }
+}
+
+// Initial silent load of environment files
+loadAllDotEnvs();
 
 export interface MentorConfig {
-  provider: 'anthropic' | 'gemini' | 'openai' | 'openrouter' | 'bedrock' | 'custom' | 'mock';
+  provider: 'antigravity' | 'anthropic' | 'gemini' | 'openai' | 'openrouter' | 'bedrock' | 'custom' | 'mock';
   model: string;
   apiKey?: string;
   baseUrl?: string;
@@ -29,6 +62,8 @@ export interface MentorConfig {
 }
 
 export interface OverwatchConfig {
+  enabled: boolean;
+
   openrouterApiKey?: string;
   anthropicApiKey?: string;
   geminiApiKey?: string;
@@ -55,7 +90,7 @@ export interface OverwatchConfig {
   customModels?: ModelEntry[];
 
   juniorModel?: string;
-  mentorProvider?: 'bedrock' | 'anthropic' | 'gemini' | 'openai' | 'openrouter' | 'custom';
+  mentorProvider?: 'antigravity' | 'bedrock' | 'anthropic' | 'gemini' | 'openai' | 'openrouter' | 'custom';
   mentorModel: string;
   mentorFallbacks: MentorConfig[];
 
@@ -90,11 +125,16 @@ export function getGlobalConfigPath(): string {
 }
 
 export function loadConfigFile(customPath?: string): Partial<OverwatchConfig> {
+  // Isolate automated tests from machine-global config unless an explicit path is provided
+  if (!customPath && (process.env.VITEST || process.env.NODE_ENV === 'test')) {
+    return {};
+  }
+
   const filePath = customPath || getGlobalConfigPath();
   try {
     if (fs.existsSync(filePath)) {
       const content = fs.readFileSync(filePath, 'utf-8');
-      return JSON.parse(content);
+      return JSON.parse(content.replace(/^\uFEFF/, ''));
     }
   } catch (err) {
     console.error(`${LOG_PREFIX} Warning: Failed to parse config file at ${filePath}:`, err);
@@ -125,7 +165,7 @@ export function saveConfigFile(
 
 /**
  * Resolves configuration by strict precedence:
- * Per-call overrides > Environment variables > .env > ~/.overwatch/config.json > Defaults
+ * Per-call overrides > Environment variables > .env > ~/.agent-overwatch/config.json > Defaults
  */
 export function resolveConfig(
   overrides: Partial<OverwatchConfig> = {},
@@ -134,6 +174,10 @@ export function resolveConfig(
   const fileConfig = loadConfigFile(customConfigPath);
   const modelDefaults = getModelDefaults();
   const envPrefix = APP_NAME.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+
+  const envEnabledStr =
+    process.env[`${envPrefix}_ENABLED`] ?? process.env.OVERWATCH_ENABLED;
+  const envEnabled = envEnabledStr !== undefined ? envEnabledStr === 'true' : undefined;
 
   const envOpenRouter = process.env.OPENROUTER_API_KEY;
   const envAnthropic = process.env.ANTHROPIC_API_KEY;
@@ -200,7 +244,7 @@ export function resolveConfig(
     process.env[`${envPrefix}_MENTOR_PROVIDER`] ||
     process.env.OVERWATCH_MENTOR_PROVIDER ||
     process.env.MENTOR_PROVIDER
-  ) as 'bedrock' | 'anthropic' | 'gemini' | 'openai' | 'openrouter' | 'custom' | undefined;
+  ) as 'antigravity' | 'bedrock' | 'anthropic' | 'gemini' | 'openai' | 'openrouter' | 'custom' | undefined;
   const envMentorModel =
     process.env[`${envPrefix}_MENTOR_MODEL`] || process.env.OVERWATCH_MENTOR_MODEL;
   const envMaxCallsStr =
@@ -210,7 +254,27 @@ export function resolveConfig(
     process.env[`${envPrefix}_TIMEOUT_MS`] || process.env.OVERWATCH_TIMEOUT_MS;
   const envTimeout = envTimeoutStr ? parseInt(envTimeoutStr, 10) : undefined;
 
+  const envAllowSameTierStr =
+    process.env[`${envPrefix}_ALLOW_SAME_TIER`] || process.env.OVERWATCH_ALLOW_SAME_TIER;
+  const envAllowSameTier =
+    envAllowSameTierStr !== undefined ? envAllowSameTierStr === 'true' : undefined;
+
+  const envFastModeStr =
+    process.env[`${envPrefix}_FAST_MODE`] || process.env.OVERWATCH_FAST_MODE;
+  const envFastMode =
+    envFastModeStr !== undefined ? envFastModeStr === 'true' : undefined;
+
+  const envThinkingBudgetStr =
+    process.env[`${envPrefix}_THINKING_BUDGET`] || process.env.OVERWATCH_THINKING_BUDGET;
+  const envThinkingBudget = envThinkingBudgetStr ? parseInt(envThinkingBudgetStr, 10) : undefined;
+
   return {
+    enabled:
+      overrides.enabled ??
+      envEnabled ??
+      fileConfig.enabled ??
+      true,
+
     openrouterApiKey:
       overrides.openrouterApiKey ?? envOpenRouter ?? fileConfig.openrouterApiKey,
     anthropicApiKey:
@@ -323,16 +387,23 @@ export function resolveConfig(
 
     thinkingBudgetTokens:
       overrides.thinkingBudgetTokens ??
+      envThinkingBudget ??
       fileConfig.thinkingBudgetTokens ??
       DEFAULT_THINKING_BUDGET,
 
     fastMode:
-      overrides.fastMode ?? fileConfig.fastMode ?? false,
+      overrides.fastMode ??
+      envFastMode ??
+      fileConfig.fastMode ??
+      false,
 
     enablePromptCaching:
       overrides.enablePromptCaching ?? fileConfig.enablePromptCaching ?? true,
 
     allowSameTier:
-      overrides.allowSameTier ?? fileConfig.allowSameTier ?? false,
+      overrides.allowSameTier ??
+      envAllowSameTier ??
+      fileConfig.allowSameTier ??
+      false,
   };
 }

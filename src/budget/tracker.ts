@@ -47,10 +47,14 @@ export function loadStoredUsage(repoPath: string): StoredUsage {
   try {
     if (fs.existsSync(filePath)) {
       const content = fs.readFileSync(filePath, 'utf-8');
-      return JSON.parse(content);
+      if (content.trim()) {
+        return JSON.parse(content);
+      }
     }
   } catch (err) {
-    console.error(`${LOG_PREFIX} Failed to read usage data at ${filePath}:`, err);
+    if (!process.env.VITEST) {
+      console.error(`${LOG_PREFIX} Failed to read usage data at ${filePath}:`, err);
+    }
   }
   return {
     totalCalls: 0,
@@ -69,9 +73,13 @@ export function saveStoredUsage(repoPath: string, data: StoredUsage): void {
     if (!fs.existsSync(dirPath)) {
       fs.mkdirSync(dirPath, { recursive: true });
     }
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+    const tempFile = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+    fs.writeFileSync(tempFile, JSON.stringify(data, null, 2), 'utf-8');
+    fs.renameSync(tempFile, filePath);
   } catch (err) {
-    console.error(`${LOG_PREFIX} Failed to write usage data to ${filePath}:`, err);
+    if (!process.env.VITEST) {
+      console.error(`${LOG_PREFIX} Failed to write usage data to ${filePath}:`, err);
+    }
   }
 }
 

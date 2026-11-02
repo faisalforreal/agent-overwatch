@@ -85,7 +85,7 @@ export async function executeReview(
   recordCallUsage(
     repoPath,
     TOOL_REVIEW,
-    input.mentor_model || 'mentor',
+    feedback.modelUsed || input.mentor_model || 'mentor',
     feedback.usage
   );
 
