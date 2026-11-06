@@ -37,6 +37,7 @@ export interface OverwatchStatusResult {
     exists: boolean;
     sizeBytes: number;
   };
+  operatingMode?: 'antigravity_delegation' | 'external_api';
 }
 
 export async function executeStatus(
@@ -75,6 +76,11 @@ export async function executeStatus(
     }
   }
 
+  const isAntigravity = health.provider?.includes('antigravity');
+  const operatingMode: 'antigravity_delegation' | 'external_api' = isAntigravity
+    ? 'antigravity_delegation'
+    : 'external_api';
+
   const result: OverwatchStatusResult = {
     juniorModel: effectiveJunior,
     mentorModel: config.mentorModel,
@@ -90,12 +96,17 @@ export async function executeStatus(
     maxSessionCalls: config.maxCallsPerSession,
     lifetimeUsage,
     notesMemory,
+    operatingMode,
   };
 
   const titleName = APP_NAME.charAt(0).toUpperCase() + APP_NAME.slice(1);
   let md = `### 🛰️ ${titleName} System Status\n\n`;
   const juniorDisplay = effectiveJunior === 'auto' ? 'Auto-detected (Client Agent)' : effectiveJunior;
   const tierDisplay = tierRes.juniorTier === 'auto' ? 'Auto' : tierRes.juniorTier;
+  const modeLabel = isAntigravity
+    ? 'Top-Down Architect Delegation Mode (`/agent-overwatch`)'
+    : 'Classic Bottom-Up External API Mode (`/agent-overwatch-reverse`)';
+  md += `- **Active Operating Mode:** ${modeLabel}\n`;
   md += `- **Junior Model:** \`${juniorDisplay}\` (Tier: **${tierDisplay}**)\n`;
   md += `- **Mentor Model:** \`${config.mentorModel}\` (Tier: **${tierRes.mentorTier}**)\n`;
   md += `- **Tier Hierarchy:** ${tierRes.valid ? '✅ Superiority Validated' : '⚠️ WARNING: ' + tierRes.warning}\n`;

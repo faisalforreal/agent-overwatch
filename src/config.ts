@@ -107,6 +107,7 @@ export interface OverwatchConfig {
   fastMode: boolean;
   enablePromptCaching: boolean;
   allowSameTier: boolean;
+  antigravitySubagentModel?: 'inherit' | 'pro' | 'flash';
 }
 
 export function maskApiKey(key?: string): string {
@@ -405,5 +406,10 @@ export function resolveConfig(
       envAllowSameTier ??
       fileConfig.allowSameTier ??
       false,
+
+    antigravitySubagentModel:
+      overrides.antigravitySubagentModel ??
+      (process.env.OVERWATCH_ANTIGRAVITY_SUBAGENT_MODEL as any) ??
+      fileConfig.antigravitySubagentModel,
   };
 }

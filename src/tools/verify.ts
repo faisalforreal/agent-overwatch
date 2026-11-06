@@ -5,7 +5,9 @@ import { OVERWATCH_SYSTEM_PROMPT } from '../prompts/system.js';
 import { buildVerifyPrompt } from '../prompts/templates.js';
 import { formatFeedbackAsMarkdown } from '../prompts/parser.js';
 import { gatherGitContext } from '../context/git.js';
+import { gatherDeepRepoContext } from '../context/files.js';
 import { readRepoNotes, appendRepoNotes } from '../context/notes.js';
+import { synchronizeCatchUpContext } from '../context/catchup.js';
 import { checkBudget, recordCallUsage } from '../budget/tracker.js';
 import { TOOL_VERIFY } from '../constants.js';
 
@@ -33,17 +35,37 @@ export async function executeVerify(
 
   const repoPath = input.repo_path || process.cwd();
 
-  if (onProgress) onProgress(10, 100, 'Gathering git diff and test output...');
+  if (onProgress) onProgress(10, 100, 'Gathering git diff, status, and file context for verification...');
+
+  // 1. Synchronize mid-session catch-up context
+  const catchUp = synchronizeCatchUpContext(repoPath, {
+    sessionContext: input.session_context,
+    toolName: TOOL_VERIFY,
+  });
+
   const gitCtx = gatherGitContext(repoPath, input.base_ref);
   const notes = readRepoNotes(repoPath);
+  const repoTree = gitCtx.repoTree || '';
+
+  // 2. Gather deep repository context (existing relevant files, prompt-detected files, untracked, modified, 1-hop imports)
+  const deepFiles = gatherDeepRepoContext(repoPath, {
+    explicitFiles: input.relevant_files,
+    modifiedFiles: gitCtx.modifiedFiles,
+    untrackedFiles: gitCtx.untrackedFiles,
+    textContext: `${input.user_goal}\n${input.test_results || ''}`,
+  });
+  const relevantFilesContent = deepFiles.combinedFormatted;
 
   const prompt = buildVerifyPrompt(input, {
     gitDiff: gitCtx.gitDiff,
     gitStatus: gitCtx.gitStatus,
+    repoTree,
+    relevantFilesContent,
+    catchUpSummary: catchUp.catchUpSummary,
     notes,
   });
 
-  if (onProgress) onProgress(25, 100, 'Submitting diff and test results to mentor for verification...');
+  if (onProgress) onProgress(25, 100, 'Submitting diff, files, and test results to mentor for verification...');
 
   const feedback = await router.executeReviewWithFallbacks({
     model: input.mentor_model,

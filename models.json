@@ -230,13 +230,13 @@
       "description": "Amazon Nova Micro on Bedrock"
     },
     {
-      "pattern": "^(google/)?gemini-.*flash.*",
+      "pattern": "^(google/)?(gemini-.*flash.*|flash)$",
       "tier": "medium",
       "ordinal": 2,
       "reasoning": false,
       "inputCostPerMillion": 0.1,
       "outputCostPerMillion": 0.4,
-      "description": "Google Gemini Flash high-throughput models (2.0 Flash, 1.5 Flash, 3.8 Flash)"
+      "description": "Google Gemini Flash high-throughput models (2.0 Flash, 1.5 Flash, 3.8 Flash, flash)"
     },
     {
       "pattern": "^(anthropic/)?claude-3-5-haiku.*",

@@ -4,6 +4,8 @@ import { ProgressCallback } from '../providers/base.js';
 import { OVERWATCH_SYSTEM_PROMPT } from '../prompts/system.js';
 import { buildQuickHintPrompt } from '../prompts/templates.js';
 import { formatFeedbackAsMarkdown } from '../prompts/parser.js';
+import { gatherDeepRepoContext } from '../context/files.js';
+import { readRepoNotes } from '../context/notes.js';
 import { checkBudget, recordCallUsage } from '../budget/tracker.js';
 import { TOOL_QUICK_HINT } from '../constants.js';
 
@@ -15,6 +17,7 @@ export async function executeQuickHint(
   onProgress?: ProgressCallback,
   timeoutMs?: number
 ): Promise<{ feedback: OverwatchFeedback; markdown: string }> {
+  const targetRepo = repoPath || input.repo_path || process.cwd();
   const budget = checkBudget(maxBudgetCalls);
   if (!budget.allowed) {
     const budgetFb: OverwatchFeedback = {
@@ -30,18 +33,28 @@ export async function executeQuickHint(
     return { feedback: budgetFb, markdown: formatFeedbackAsMarkdown(budgetFb) };
   }
 
-  const prompt = buildQuickHintPrompt(input);
+  const notes = readRepoNotes(targetRepo);
+  const deepFiles = gatherDeepRepoContext(targetRepo, {
+    explicitFiles: input.relevant_files,
+    textContext: `${input.problem_description}\n${input.error_or_log}\n${input.attempted_fix || ''}`,
+    fastMode: true,
+  });
+
+  const prompt = buildQuickHintPrompt(input, {
+    notes,
+    relevantFilesContent: deepFiles.combinedFormatted,
+  });
 
   const feedback = await router.executeReviewWithFallbacks({
     model: input.mentor_model,
     mentorProvider: input.mentor_provider,
     systemPrompt: OVERWATCH_SYSTEM_PROMPT,
     userPrompt: prompt,
+    notesContext: notes,
     onProgress,
     timeoutMs,
   });
 
-  const targetRepo = repoPath || input.repo_path || process.cwd();
   recordCallUsage(targetRepo, TOOL_QUICK_HINT, feedback.modelUsed || input.mentor_model || 'mentor', feedback.usage);
 
   return {

@@ -5,7 +5,9 @@ import { OVERWATCH_SYSTEM_PROMPT } from '../prompts/system.js';
 import { buildReviewPrompt } from '../prompts/templates.js';
 import { formatFeedbackAsMarkdown } from '../prompts/parser.js';
 import { gatherGitContext } from '../context/git.js';
+import { gatherDeepRepoContext } from '../context/files.js';
 import { readRepoNotes, appendRepoNotes } from '../context/notes.js';
+import { synchronizeCatchUpContext } from '../context/catchup.js';
 import { checkBudget, recordCallUsage } from '../budget/tracker.js';
 import { validateMentorSuperiority, getModelDefaults } from '../tiers.js';
 import { TOOL_REVIEW, LOG_PREFIX } from '../constants.js';
@@ -43,26 +45,48 @@ export async function executeReview(
   }
 
   const repoPath = input.repo_path || process.cwd();
+
+  // 1. Synchronize mid-session catch-up context
+  const catchUp = synchronizeCatchUpContext(repoPath, {
+    sessionContext: input.session_context,
+    toolName: TOOL_REVIEW,
+  });
+
   // Use the real git diff when repo_path was explicitly provided by the caller.
   // When only falling back to process.cwd(), the caller had no repo context — honour
   // their draft_code_or_diff instead of silently overwriting it with an unrelated diff.
   let gitDiff = input.draft_code_or_diff || '';
-  let notes = '';
+  let notes = readRepoNotes(repoPath);
+  let repoTree = '';
+  let modifiedFiles: string[] = [];
+  let untrackedFiles: string[] = [];
 
   if (input.repo_path) {
-    if (onProgress) onProgress(10, 100, 'Gathering git diff across repository...');
+    if (onProgress) onProgress(10, 100, 'Gathering git diff and file context across repository...');
     const gitCtx = gatherGitContext(repoPath);
     if (gitCtx.gitDiff) {
       gitDiff = gitCtx.gitDiff;
     }
-    notes = readRepoNotes(repoPath);
-  } else {
-    notes = readRepoNotes(repoPath);
+    repoTree = gitCtx.repoTree || '';
+    modifiedFiles = gitCtx.modifiedFiles || [];
+    untrackedFiles = gitCtx.untrackedFiles || [];
   }
+
+  // 2. Gather deep repository context (existing relevant files, prompt-detected files, untracked, modified, 1-hop imports)
+  const deepFiles = gatherDeepRepoContext(repoPath, {
+    explicitFiles: input.relevant_files,
+    modifiedFiles,
+    untrackedFiles,
+    textContext: `${input.user_goal}\n${input.file_context || ''}\n${input.current_tests_or_errors || ''}`,
+  });
+  const relevantFilesContent = deepFiles.combinedFormatted;
 
   const prompt = buildReviewPrompt(input, {
     gitDiff,
     fileContext: input.file_context,
+    repoTree,
+    relevantFilesContent,
+    catchUpSummary: catchUp.catchUpSummary,
     notes,
   });
 

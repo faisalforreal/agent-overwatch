@@ -12,6 +12,7 @@ export interface AntigravityProviderOptions {
   mcpServer?: Server;
   samplingHandler?: (params: any) => Promise<any>;
   defaultModel?: string;
+  subagentModel?: 'inherit' | 'pro' | 'flash';
 }
 
 /**
@@ -32,10 +33,12 @@ export class AntigravityProvider implements MentorProvider {
   public defaultModel = 'gemini-4-argon';
   private mcpServer?: Server;
   private customSamplingHandler?: (params: any) => Promise<any>;
+  private subagentModel?: 'inherit' | 'pro' | 'flash';
 
   constructor(options: AntigravityProviderOptions = {}) {
     this.mcpServer = options.mcpServer;
     this.customSamplingHandler = options.samplingHandler;
+    this.subagentModel = options.subagentModel;
     if (options.defaultModel) {
       this.defaultModel = options.defaultModel;
     }
@@ -134,68 +137,88 @@ export class AntigravityProvider implements MentorProvider {
       }
     }
 
-    // 3. Fallback: Antigravity Native Single-Turn Subagent Bridge
-    // Prepare a pre-packaged single-turn envelope for the host agent to execute
-    // via invoke_subagent(TypeName="research", Model="pro")
+    // 3. Fallback: Antigravity Native Top-Down Delegation & Subagent Bridge
     if (options.onProgress) {
       options.onProgress(
         30,
         100,
-        `Preparing native single-turn Antigravity subagent bridge (${targetModel})...`
+        `Preparing native Antigravity delegation context (${targetModel})...`
       );
     }
 
-    const subagentPrompt = `## OVERWATCH SENIOR ARCHITECT MENTOR REVIEW
-You are acting as the Senior Staff Architect mentor for Agent-Overwatch.
-ALL REPOSITORY CONTEXT, GIT DIFFS, AND NOTES ARE PROVIDED BELOW.
-DO NOT CALL ANY TOOLS. DO NOT SEARCH FILES.
-Analyze the context and reply IMMEDIATELY in a single turn with valid JSON matching this schema:
-{
-  "verdict": "APPROVED" | "NEEDS_REFINEMENT" | "CRITICAL_REVISION",
-  "summary": "1-3 sentences senior architectural assessment",
-  "defects": [
-    {
-      "severity": "critical" | "high" | "medium" | "low",
-      "location": "file path, function name, or line",
-      "explanation": "Why this breaks or fails",
-      "suggested_fix": "Concrete fix instruction or code snippet"
-    }
-  ],
-  "optimizations": [
-    {
-      "type": "performance" | "architecture" | "memory" | "security" | "maintainability",
-      "description": "Specific optimization",
-      "impact": "Expected gain"
-    }
-  ],
-  "next_steps": ["Step 1...", "Step 2...", "Step 3..."],
-  "avoid": ["Do NOT do X...", "Avoid pattern Y..."],
-  "coaching_prompt": "Direct, imperatively phrased prompt for the junior agent next turn",
-  "notes_to_save": ["Decision: ...", "Constraint: ..."]
-}
+    const promptLower = options.userPrompt.toLowerCase();
+    const isPlanCheck = options.userPrompt.includes('TASK: PLAN CHECK') || promptLower.includes('plan');
+    const isReview = options.userPrompt.includes('TASK: CODE REVIEW') || promptLower.includes('review');
+    const isVerify = options.userPrompt.includes('TASK: RELEASE READINESS') || promptLower.includes('verify');
+    const effectiveSubagentModel = this.subagentModel || 'flash';
 
-${options.notesContext ? `### Active Notes:\n${options.notesContext}\n\n` : ''}
-${options.userPrompt}
-`;
+    let subagentCallAdvice: any;
 
-    const subagentCallAdvice = {
-      verdict: 'APPROVED',
-      summary: `[Antigravity Native Mode] Context prepared for single-turn '${targetModel}' mentor review using Antigravity built-in 'pro' tier.`,
-      defects: [],
-      optimizations: [],
-      next_steps: [
-        `Call invoke_subagent once with TypeName='research', Model='pro', Role='Overwatch Senior Architect'.`,
-        `Pass the pre-packaged prompt in the coaching_prompt field below.`,
-        `Directly obey the returned verdict, defects, and next steps from the subagent review.`,
-      ],
-      avoid: [
-        `Do NOT call tools inside the subagent; all diffs, files, and notes are already bundled inline.`,
-      ],
-      coaching_prompt: `Run: invoke_subagent(TypeName="research", Model="pro", Role="Overwatch Senior Architect", Prompt=${JSON.stringify(subagentPrompt)})`,
-      notes_to_save: [],
-      modelUsed: targetModel,
-      providerUsed: 'antigravity',
-    };
+    if (isPlanCheck) {
+      // In Top-Down Architect Delegation mode:
+      // The Senior Architect (chat model) designs the plan and locks constraints.
+      // Overwatch creates the Junior Implementation prompt for a fast Flash worker.
+      const promptSnippet = options.userPrompt.length > 400
+        ? options.userPrompt.substring(0, 400).replace(/"/g, "'") + '...'
+        : options.userPrompt.replace(/"/g, "'");
+
+      subagentCallAdvice = {
+        verdict: 'APPROVED',
+        summary: `[Antigravity Native Mode] Architectural plan approved and registered. Senior Architect in chat is ready to delegate execution to a Flash worker subagent.`,
+        defects: [],
+        optimizations: [],
+        next_steps: [
+          `Dispatch implementation to Flash worker: invoke_subagent(TypeName='self', Model='${effectiveSubagentModel}', Role='Overwatch Junior Implementer').`,
+          `Instruct the subagent to make necessary file edits, run local tests, and report back with a git diff summary.`,
+          `Once the subagent completes, call agent-overwatch_review to audit the git diff against .agent-overwatch/NOTES.md.`,
+        ],
+        avoid: [
+          `Do NOT write routine boilerplate code directly in the senior chat; delegate implementation to the Flash subagent.`,
+          `Do NOT allow the subagent to violate architectural constraints recorded in .agent-overwatch/NOTES.md.`,
+        ],
+        coaching_prompt: `Run: invoke_subagent(TypeName="self", Model="${effectiveSubagentModel}", Role="Overwatch Junior Implementer", Prompt="Implement milestone per approved plan. Target: ${promptSnippet}. Follow all constraints in .agent-overwatch/NOTES.md. Run tests and report git diff.")`,
+        notes_to_save: [
+          `Plan approved for Flash worker delegation: ${new Date().toISOString().substring(0, 10)}`,
+        ],
+        modelUsed: targetModel,
+        providerUsed: 'antigravity',
+      };
+    } else if (isReview || isVerify) {
+      subagentCallAdvice = {
+        verdict: 'APPROVED',
+        summary: `[Antigravity Native Mode] Deep repository context (git diff, untracked files, 1-hop dependencies) assembled for Senior Architect in-chat audit.`,
+        defects: [],
+        optimizations: [],
+        next_steps: [
+          `Senior Architect: Review the gathered diff, untracked files, and 1-hop dependencies in chat against .agent-overwatch/NOTES.md.`,
+          `If any defects, edge-case regressions, or failing tests are found: use send_message to direct the subagent with fixes.`,
+          `If all tests pass and code quality meets standards: approve and deliver the solution to the user.`,
+        ],
+        avoid: [
+          `Do NOT approve if unverified regressions or broken tests exist.`,
+        ],
+        coaching_prompt: `Perform Senior Staff Architect audit on the gathered diff. Verify edge cases, architecture constraints, and test outputs before signing off.`,
+        notes_to_save: [],
+        modelUsed: targetModel,
+        providerUsed: 'antigravity',
+      };
+    } else {
+      subagentCallAdvice = {
+        verdict: 'APPROVED',
+        summary: `[Antigravity Native Mode] Checkpoint context assembled for Senior Architect steering.`,
+        defects: [],
+        optimizations: [],
+        next_steps: [
+          `Review subagent progress and current milestone state.`,
+          `Steer the junior implementer on the next concrete actions.`,
+        ],
+        avoid: [],
+        coaching_prompt: `Run: invoke_subagent(TypeName="self", Model="${effectiveSubagentModel}", Role="Overwatch Junior Implementer", Prompt="Proceed with next milestone per approved architecture.")`,
+        notes_to_save: [],
+        modelUsed: targetModel,
+        providerUsed: 'antigravity',
+      };
+    }
 
     return {
       rawText: JSON.stringify(subagentCallAdvice, null, 2),

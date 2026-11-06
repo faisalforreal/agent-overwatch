@@ -5,8 +5,9 @@ import { OVERWATCH_SYSTEM_PROMPT } from '../prompts/system.js';
 import { buildPlanCheckPrompt } from '../prompts/templates.js';
 import { formatFeedbackAsMarkdown } from '../prompts/parser.js';
 import { gatherGitContext } from '../context/git.js';
-import { gatherRelevantFiles } from '../context/files.js';
+import { gatherDeepRepoContext } from '../context/files.js';
 import { readRepoNotes, appendRepoNotes } from '../context/notes.js';
+import { synchronizeCatchUpContext } from '../context/catchup.js';
 import { checkBudget, recordCallUsage } from '../budget/tracker.js';
 import { TOOL_PLAN_CHECK } from '../constants.js';
 
@@ -34,15 +35,32 @@ export async function executePlanCheck(
 
   const repoPath = input.repo_path || process.cwd();
   if (onProgress) onProgress(10, 100, 'Gathering repository status and context files...');
+
+  // 1. Synchronize mid-session catch-up context
+  const catchUp = synchronizeCatchUpContext(repoPath, {
+    sessionContext: input.session_context,
+    toolName: TOOL_PLAN_CHECK,
+  });
+
   const gitCtx = gatherGitContext(repoPath);
   const gitStatus = gitCtx.gitStatus || '';
-  const filesCtx = gatherRelevantFiles(repoPath, input.relevant_files);
-  const relevantFilesContent = filesCtx.combinedFormatted;
+  const repoTree = gitCtx.repoTree || '';
+
+  // 2. Gather deep repository context (existing relevant files, prompt-detected files, untracked, modified, 1-hop imports)
+  const deepFiles = gatherDeepRepoContext(repoPath, {
+    explicitFiles: input.relevant_files,
+    modifiedFiles: gitCtx.modifiedFiles,
+    untrackedFiles: gitCtx.untrackedFiles,
+    textContext: `${input.user_goal}\n${input.proposed_plan}\n${input.architecture_context || ''}`,
+  });
+  const relevantFilesContent = deepFiles.combinedFormatted;
   const notes = readRepoNotes(repoPath);
 
   const prompt = buildPlanCheckPrompt(input, {
     gitStatus,
+    repoTree,
     relevantFilesContent,
+    catchUpSummary: catchUp.catchUpSummary,
     notes,
   });
 

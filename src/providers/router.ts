@@ -97,6 +97,7 @@ export class ProviderRouter {
           defaultModel: cleanModel,
           mcpServer: this.mcpServer,
           samplingHandler: this.samplingHandler,
+          subagentModel: this.config.antigravitySubagentModel,
         }),
         model: cleanModel,
       };
@@ -192,6 +193,7 @@ export class ProviderRouter {
             defaultModel: cleanModel,
             mcpServer: this.mcpServer,
             samplingHandler: this.samplingHandler,
+            subagentModel: this.config.antigravitySubagentModel,
           }),
           model: cleanModel,
         };
@@ -430,6 +432,7 @@ export class ProviderRouter {
         defaultModel: modelName || 'gemini-4-argon',
         mcpServer: this.mcpServer,
         samplingHandler: this.samplingHandler,
+        subagentModel: this.config.antigravitySubagentModel,
       }),
       model: modelName || 'gemini-4-argon',
     };
