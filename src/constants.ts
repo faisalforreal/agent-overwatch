@@ -18,6 +18,7 @@ export const TOOL_REVIEW = `${APP_NAME}_review`;
 export const TOOL_QUICK_HINT = `${APP_NAME}_quick_hint`;
 export const TOOL_VERIFY = `${APP_NAME}_verify`;
 export const TOOL_STATUS = `${APP_NAME}_status`;
+export const TOOL_DIFF_AUDIT = `${APP_NAME}_diff_audit`;
 
 export const DEFAULT_SESSION_CALL_CAP = 15;
 export const DEFAULT_MAX_OUTPUT_TOKENS = 4096;
@@ -28,6 +29,7 @@ export const DEFAULT_TOOL_TIMEOUTS: Record<string, number> = {
   [TOOL_REVIEW]: 120000,     // 120s for code diff audit
   [TOOL_CHECKPOINT]: 90000,  // 90s for milestone steering
   [TOOL_QUICK_HINT]: 45000,  // 45s for quick diagnosis
+  [TOOL_DIFF_AUDIT]: 30000,  // 30s for scoped diff & baseline audit
 };
 export const DEFAULT_MAX_NOTES_BYTES = 10 * 1024; // 10 KB cap for notes to prevent token bloat
 export const DEFAULT_MAX_DIFF_BYTES = 100 * 1024; // 100 KB cap for diff

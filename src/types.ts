@@ -58,16 +58,22 @@ export const OverwatchFeedbackSchema = z.object({
 });
 export type OverwatchFeedback = z.infer<typeof OverwatchFeedbackSchema>;
 
+// Common optional context fields across all gates
+const CommonGateFields = {
+  mentor_provider: MentorProviderEnum.optional().describe('Optional per-call override for mentor provider'),
+  mentor_model: z.string().optional().describe('Optional per-call override for mentor model'),
+  junior_model: z.string().optional().describe('Optional model identifier of the junior agent executing the turn'),
+  relevant_files: z.array(z.string()).optional().describe('Relative file paths of candidate or relevant files to include in full'),
+  session_context: z.array(z.string()).optional().describe('Key decisions or requirements from earlier unmonitored conversation turns to backfill project memory'),
+};
+
 // Tool Input Schemas
 export const OverwatchPlanCheckInputSchema = z.object({
   user_goal: z.string().describe('The primary task or prompt from the user'),
   proposed_plan: z.string().describe('The detailed plan drafted by the junior agent'),
-  mentor_provider: MentorProviderEnum.optional().describe('Optional per-call override for mentor provider'),
-  mentor_model: z.string().optional().describe('Optional per-call override for mentor model'),
   repo_path: z.string().optional().describe('Absolute path to repository root for context gathering'),
-  relevant_files: z.array(z.string()).optional().describe('List of relevant relative file paths suggested by junior agent'),
   architecture_context: z.string().optional().describe('Additional notes on framework, dependencies, or system constraints'),
-  junior_model: z.string().optional().describe('Optional model identifier of the junior agent executing the turn'),
+  ...CommonGateFields,
 });
 export type OverwatchPlanCheckInput = z.infer<typeof OverwatchPlanCheckInputSchema>;
 
@@ -80,9 +86,7 @@ export const OverwatchCheckpointInputSchema = z.object({
   }),
   repo_path: z.string().optional().describe('Absolute path to repository root for automatic diff and status check'),
   error_log: z.string().optional().describe('Compiler, test, or runtime error log'),
-  mentor_provider: MentorProviderEnum.optional().describe('Optional per-call override for mentor provider'),
-  mentor_model: z.string().optional().describe('Optional per-call override for mentor model'),
-  junior_model: z.string().optional().describe('Optional model identifier of the junior agent executing the turn'),
+  ...CommonGateFields,
 });
 export type OverwatchCheckpointInput = z.infer<typeof OverwatchCheckpointInputSchema>;
 
@@ -92,9 +96,7 @@ export const OverwatchReviewInputSchema = z.object({
   draft_code_or_diff: z.string().optional().describe('Manual code or diff snippet if repo_path is not available'),
   file_context: z.string().optional().describe('Additional context or file snippets'),
   current_tests_or_errors: z.string().optional().describe('Test execution outputs or errors'),
-  mentor_provider: MentorProviderEnum.optional().describe('Optional per-call override for mentor provider'),
-  mentor_model: z.string().optional().describe('Optional per-call override for mentor model'),
-  junior_model: z.string().optional().describe('Optional model identifier of the junior agent executing the turn'),
+  ...CommonGateFields,
 });
 export type OverwatchReviewInput = z.infer<typeof OverwatchReviewInputSchema>;
 
@@ -102,10 +104,8 @@ export const OverwatchQuickHintInputSchema = z.object({
   problem_description: z.string().describe('Brief description of where the agent is stuck'),
   error_or_log: z.string().describe('The exact error message, stack trace, or compiler error'),
   attempted_fix: z.string().optional().describe('What the junior agent tried and why it failed'),
-  mentor_provider: MentorProviderEnum.optional().describe('Optional per-call override for mentor provider'),
-  mentor_model: z.string().optional().describe('Optional per-call override for mentor model'),
   repo_path: z.string().optional().describe('Absolute path to repository root for tracking and context'),
-  junior_model: z.string().optional().describe('Optional model identifier of the junior agent executing the turn'),
+  ...CommonGateFields,
 });
 export type OverwatchQuickHintInput = z.infer<typeof OverwatchQuickHintInputSchema>;
 
@@ -114,9 +114,7 @@ export const OverwatchVerifyInputSchema = z.object({
   repo_path: z.string().describe('Absolute path to repository root to inspect real git diff against base ref'),
   base_ref: z.string().optional().default('HEAD~1').describe('Git base reference to diff against (e.g. main, HEAD~1)'),
   test_results: z.string().optional().describe('Console output of test suite execution'),
-  mentor_provider: MentorProviderEnum.optional().describe('Optional per-call override for mentor provider'),
-  mentor_model: z.string().optional().describe('Optional per-call override for mentor model'),
-  junior_model: z.string().optional().describe('Optional model identifier of the junior agent executing the turn'),
+  ...CommonGateFields,
 });
 export type OverwatchVerifyInput = z.infer<typeof OverwatchVerifyInputSchema>;
 
@@ -125,6 +123,15 @@ export const OverwatchStatusInputSchema = z.object({
   junior_model: z.string().optional().describe('Optional model identifier of the junior agent executing the turn'),
 });
 export type OverwatchStatusInput = z.infer<typeof OverwatchStatusInputSchema>;
+
+export const OverwatchDiffAuditInputSchema = z.object({
+  repo_path: z.string().optional().describe('Absolute path to repository root'),
+  files: z.array(z.string()).optional().describe('Exact list of files touched by the subagent (from the handover manifest) to scope the diff and eliminate dirty directory noise'),
+  base_commit: z.string().optional().describe('Baseline commit hash before delegation'),
+  target_commit: z.string().optional().describe('The subagent micro-commit hash (e.g. overwatch(flash): ...)'),
+  mode: z.enum(['audit', 'snapshot']).optional().default('audit').describe("'snapshot' to capture pre-delegation baseline state, 'audit' to generate scoped diff"),
+});
+export type OverwatchDiffAuditInput = z.infer<typeof OverwatchDiffAuditInputSchema>;
 
 export interface ModelEntry {
   pattern: string;

@@ -13,6 +13,7 @@ import {
   TOOL_QUICK_HINT,
   TOOL_VERIFY,
   TOOL_STATUS,
+  TOOL_DIFF_AUDIT,
   DEFAULT_TOOL_TIMEOUTS,
 } from './constants.js';
 import { resolveConfig, OverwatchConfig } from './config.js';
@@ -26,6 +27,7 @@ import {
   OverwatchQuickHintInputSchema,
   OverwatchVerifyInputSchema,
   OverwatchStatusInputSchema,
+  OverwatchDiffAuditInputSchema,
 } from './types.js';
 import {
   executePlanCheck,
@@ -34,6 +36,7 @@ import {
   executeQuickHint,
   executeVerify,
   executeStatus,
+  executeDiffAudit,
 } from './tools/index.js';
 
 export interface CreateServerOptions {
@@ -63,6 +66,33 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
 
   const router = new ProviderRouter(config, options.mockProvider, { mcpServer: server });
 
+  // Common tool properties for deep context & mid-session catch-up
+  const commonToolProps = {
+    mentor_provider: {
+      type: 'string',
+      enum: ['gemini', 'anthropic', 'openai', 'openrouter', 'bedrock', 'custom', 'antigravity'],
+      description: 'Optional per-call override for mentor provider',
+    },
+    mentor_model: {
+      type: 'string',
+      description: 'Optional per-call override for mentor model (e.g. gemini-4-argon, claude-opus-5.5)',
+    },
+    junior_model: {
+      type: 'string',
+      description: 'Optional junior model identifier if different from default',
+    },
+    relevant_files: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'Relative file paths of candidate or relevant files to include in full',
+    },
+    session_context: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'Key decisions or user requirements from earlier unmonitored conversation turns to backfill project memory',
+    },
+  };
+
   // List tools handler
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
@@ -86,28 +116,11 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
                 type: 'string',
                 description: 'Absolute path to repository root for context gathering',
               },
-              relevant_files: {
-                type: 'array',
-                items: { type: 'string' },
-                description: 'Relevant relative file paths suggested by junior agent',
-              },
               architecture_context: {
                 type: 'string',
                 description: 'Notes on framework, dependencies, or system constraints',
               },
-              mentor_provider: {
-                type: 'string',
-                enum: ['gemini', 'anthropic', 'openai', 'openrouter', 'bedrock', 'custom', 'antigravity'],
-                description: 'Optional per-call override for mentor provider',
-              },
-              mentor_model: {
-                type: 'string',
-                description: 'Optional per-call override for mentor model (e.g. gemini-4-argon, claude-opus-5.5)',
-              },
-              junior_model: {
-                type: 'string',
-                description: 'Optional junior model identifier if different from default',
-              },
+              ...commonToolProps,
             },
             required: ['user_goal', 'proposed_plan'],
           },
@@ -150,19 +163,7 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
                 type: 'string',
                 description: 'Compiler, test, or runtime error log',
               },
-              mentor_provider: {
-                type: 'string',
-                enum: ['gemini', 'anthropic', 'openai', 'openrouter', 'bedrock', 'custom', 'antigravity'],
-                description: 'Optional per-call override for mentor provider',
-              },
-              mentor_model: {
-                type: 'string',
-                description: 'Optional per-call override for mentor model',
-              },
-              junior_model: {
-                type: 'string',
-                description: 'Optional junior model identifier if different from default',
-              },
+              ...commonToolProps,
             },
             required: ['user_goal', 'state'],
           },
@@ -194,19 +195,7 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
                 type: 'string',
                 description: 'Test execution outputs or errors',
               },
-              mentor_provider: {
-                type: 'string',
-                enum: ['gemini', 'anthropic', 'openai', 'openrouter', 'bedrock', 'custom', 'antigravity'],
-                description: 'Optional per-call override for mentor provider',
-              },
-              mentor_model: {
-                type: 'string',
-                description: 'Optional per-call override for mentor model (must pass tier check)',
-              },
-              junior_model: {
-                type: 'string',
-                description: 'Optional junior model identifier if different from default',
-              },
+              ...commonToolProps,
             },
             required: ['user_goal'],
           },
@@ -234,19 +223,7 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
                 type: 'string',
                 description: 'Absolute path to repository root for tracking and context',
               },
-              mentor_provider: {
-                type: 'string',
-                enum: ['gemini', 'anthropic', 'openai', 'openrouter', 'bedrock', 'custom', 'antigravity'],
-                description: 'Optional per-call override for mentor provider',
-              },
-              mentor_model: {
-                type: 'string',
-                description: 'Optional per-call override for mentor model',
-              },
-              junior_model: {
-                type: 'string',
-                description: 'Optional junior model identifier if different from default',
-              },
+              ...commonToolProps,
             },
             required: ['problem_description', 'error_or_log'],
           },
@@ -274,19 +251,7 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
                 type: 'string',
                 description: 'Console output of test suite execution',
               },
-              mentor_provider: {
-                type: 'string',
-                enum: ['gemini', 'anthropic', 'openai', 'openrouter', 'bedrock', 'custom', 'antigravity'],
-                description: 'Optional per-call override for mentor provider',
-              },
-              mentor_model: {
-                type: 'string',
-                description: 'Optional per-call override for mentor model',
-              },
-              junior_model: {
-                type: 'string',
-                description: 'Optional junior model identifier if different from default',
-              },
+              ...commonToolProps,
             },
             required: ['user_goal', 'repo_path'],
           },
@@ -309,6 +274,38 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
             },
           },
         },
+        {
+          name: TOOL_DIFF_AUDIT,
+          description:
+            'Scoped diff & baseline audit tool for Senior Architect: Eliminates dirty directory noise by comparing only the files touched by the subagent against a baseline commit or pre-delegation snapshot.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              repo_path: {
+                type: 'string',
+                description: 'Absolute path to repository root',
+              },
+              files: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Exact list of files touched by the subagent (from the handover manifest) to scope the diff and eliminate dirty directory noise',
+              },
+              base_commit: {
+                type: 'string',
+                description: 'Baseline commit hash before delegation',
+              },
+              target_commit: {
+                type: 'string',
+                description: 'The subagent micro-commit hash (e.g. overwatch(flash): ...)',
+              },
+              mode: {
+                type: 'string',
+                enum: ['audit', 'snapshot'],
+                description: "'snapshot' to capture pre-delegation baseline state, 'audit' to generate scoped diff",
+              },
+            },
+          },
+        },
       ],
     };
   });
@@ -318,7 +315,7 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
     const { name, arguments: args, _meta } = request.params;
     const progressToken = _meta?.progressToken;
 
-    // Refresh configuration dynamically so modifications to ~/.agent-overwatch/config.json take effect live
+    // Refresh configuration dynamically on each tool call so changes to config take effect immediately
     const liveConfig = resolveConfig(options.config);
     router.setConfig(liveConfig);
 
@@ -488,6 +485,17 @@ export function createOverwatchServer(options: CreateServerOptions = {}): {
           content: [
             { type: 'text', text: markdown },
             { type: 'text', text: JSON.stringify(status) },
+          ],
+        };
+      }
+
+      if (name === TOOL_DIFF_AUDIT) {
+        const input = OverwatchDiffAuditInputSchema.parse(args || {});
+        const { result, markdown } = await executeDiffAudit(input);
+        return {
+          content: [
+            { type: 'text', text: markdown },
+            { type: 'text', text: JSON.stringify(result) },
           ],
         };
       }
